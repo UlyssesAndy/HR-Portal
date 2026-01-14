@@ -133,6 +133,91 @@ export async function PATCH(
   }
 }
 
+// DELETE employee (permanent deletion)
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Only ADMIN can permanently delete employees
+    const userRoles = session.user.roles || [];
+    if (!userRoles.includes("ADMIN")) {
+      return NextResponse.json(
+        { error: "Forbidden: Admin role required for deletion" },
+        { status: 403 }
+      );
+    }
+
+    const { id } = await params;
+
+    // Get employee data before deletion for audit
+    const employee = await db.employee.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        fullName: true,
+        email: true,
+      },
+    });
+
+    if (!employee) {
+      return NextResponse.json({ error: "Employee not found" }, { status: 404 });
+    }
+
+    // Prevent deleting yourself
+    if (employee.email === session.user.email) {
+      return NextResponse.json(
+        { error: "Cannot delete your own account" },
+        { status: 400 }
+      );
+    }
+
+    // Delete employee and all related data (cascade)
+    await db.employee.delete({
+      where: { id },
+    });
+
+    // Get current user's employee record for audit
+    const currentUserEmployee = await db.employee.findFirst({
+      where: { email: session.user.email! },
+    });
+
+    // Create audit event
+    await db.auditEvent.create({
+      data: {
+        actorId: currentUserEmployee?.id || null,
+        actorEmail: session.user.email,
+        action: "employee.deleted",
+        resourceType: "employee",
+        resourceId: id,
+        metadata: {
+          deletedEmployee: {
+            id: employee.id,
+            fullName: employee.fullName,
+            email: employee.email,
+          },
+        },
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: "Employee permanently deleted",
+    });
+  } catch (error) {
+    console.error("Error deleting employee:", error);
+    return NextResponse.json(
+      { error: "Failed to delete employee" },
+      { status: 500 }
+    );
+  }
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }

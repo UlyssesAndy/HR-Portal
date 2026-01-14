@@ -21,6 +21,8 @@ import {
   Loader2,
   CheckCircle,
   Scale,
+  Ban,
+  Trash2,
 } from "lucide-react";
 
 interface QuickActionsProps {
@@ -87,6 +89,73 @@ export function QuickActions({
     }
   };
 
+  const handleBlockUser = async () => {
+    if (!confirm(`Block user ${employeeName}? This will set status to TERMINATED and prevent login.`)) {
+      return;
+    }
+
+    setIsUpdating(true);
+    setResult(null);
+
+    try {
+      const response = await fetch(`/api/employees/${employeeId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          status: "TERMINATED",
+          terminationDate: new Date().toISOString(),
+        }),
+      });
+
+      if (response.ok) {
+        setResult({ success: true, message: "User blocked successfully" });
+        setTimeout(() => {
+          router.refresh();
+        }, 1500);
+      } else {
+        const data = await response.json();
+        setResult({ success: false, message: data.error || "Block failed" });
+      }
+    } catch (error) {
+      setResult({ success: false, message: "Network error" });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    const confirmation = prompt(
+      `⚠️ DANGER: This will PERMANENTLY DELETE ${employeeName} and all related data.\n\nType "DELETE" to confirm:`
+    );
+
+    if (confirmation !== "DELETE") {
+      return;
+    }
+
+    setIsUpdating(true);
+    setResult(null);
+
+    try {
+      const response = await fetch(`/api/employees/${employeeId}`, {
+        method: "DELETE",
+      });
+
+      if (response.ok) {
+        setResult({ success: true, message: "User deleted successfully" });
+        setTimeout(() => {
+          router.push("/employees");
+        }, 1500);
+      } else {
+        const data = await response.json();
+        setResult({ success: false, message: data.error || "Delete failed" });
+      }
+    } catch (error) {
+      setResult({ success: false, message: "Network error" });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   const openModal = (type: string, currentValue?: string) => {
     setShowModal(type);
     setSelectedValue(currentValue || "");
@@ -119,6 +188,21 @@ export function QuickActions({
           <DropdownMenuItem onClick={() => openModal("manager")}>
             <Users className="h-4 w-4 mr-2" />
             Reassign Manager
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem 
+            onClick={handleBlockUser}
+            className="text-orange-600 focus:text-orange-600 focus:bg-orange-50"
+          >
+            <Ban className="h-4 w-4 mr-2" />
+            Block User
+          </DropdownMenuItem>
+          <DropdownMenuItem 
+            onClick={handleDeleteUser}
+            className="text-red-600 focus:text-red-600 focus:bg-red-50"
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Delete User
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -249,6 +333,26 @@ export function QuickActions({
                 </Button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Global result notification for block/delete */}
+      {result && !showModal && (
+        <div className="fixed bottom-4 right-4 z-50">
+          <div
+            className={`p-4 rounded-xl shadow-2xl flex items-center gap-3 min-w-[300px] ${
+              result.success ? "bg-green-50 border-2 border-green-200" : "bg-red-50 border-2 border-red-200"
+            }`}
+          >
+            {result.success ? (
+              <CheckCircle className="h-5 w-5 text-green-600" />
+            ) : (
+              <AlertCircle className="h-5 w-5 text-red-600" />
+            )}
+            <span className={result.success ? "text-green-700 font-medium" : "text-red-700 font-medium"}>
+              {result.message}
+            </span>
           </div>
         </div>
       )}

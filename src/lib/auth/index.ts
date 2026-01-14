@@ -182,7 +182,18 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   },
   callbacks: {
     async signIn({ user }) {
-      // All validation done in authorize()
+      // Block TERMINATED users from logging in
+      if (user.email) {
+        const employee = await db.employee.findUnique({
+          where: { email: user.email.toLowerCase() },
+          select: { status: true },
+        });
+
+        if (employee && employee.status === "TERMINATED") {
+          return false; // Deny login
+        }
+      }
+      
       return true;
     },
 
