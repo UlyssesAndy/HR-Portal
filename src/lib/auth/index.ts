@@ -1,8 +1,8 @@
 import NextAuth from "next-auth";
-import Google from "next-auth/providers/google";
 import Credentials from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { db } from "@/lib/db";
+import bcrypt from "bcryptjs";
 
 // Role type (matches Prisma enum after generation)
 export type AppRole = "EMPLOYEE" | "MANAGER" | "HR" | "PAYROLL_FINANCE" | "ADMIN";
@@ -30,38 +30,24 @@ declare module "@auth/core/jwt" {
   }
 }
 
-// Build providers array dynamically
+// Build providers array
 const providers: any[] = [];
 
-// Add Google provider only if credentials are configured
-if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
-  providers.push(
-    Google({
-      clientId: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      authorization: {
-        params: {
-          prompt: "select_account",
-          hd: process.env.ALLOWED_EMAIL_DOMAINS?.split(",")[0] || undefined,
-        },
-      },
-    })
-  );
-}
-
-// Add Credentials provider for email-based login
+// Credentials provider for password-based login
 providers.push(
   Credentials({
-    id: "email-login",
-    name: "Email",
+    id: "credentials",
+    name: "Password",
     credentials: {
       email: { label: "Email", type: "email", placeholder: "your@email.com" },
+      password: { label: "Password", type: "password" },
     },
     async authorize(credentials) {
       const email = credentials?.email as string;
+      const password = credentials?.password as string;
 
-      if (!email) {
-        throw new Error("Email is required");
+      if (!email || !password) {
+        throw new Error("Email and password are required");
       }
 
       // Validate email format
@@ -71,79 +57,81 @@ providers.push(
       }
 
       const normalizedEmail = email.toLowerCase().trim();
-      const userDomain = normalizedEmail.split("@")[1];
-      const allowedDomains = (process.env.ALLOWED_EMAIL_DOMAINS || "")
-        .split(",")
-        .map((d) => d.trim().toLowerCase());
 
-      // Check if domain is allowed OR user was invited
-      let isAllowed = allowedDomains.includes(userDomain);
-
-      if (!isAllowed) {
-        // Check for existing employee or invitation
-        const existingEmployee = await db.employee.findUnique({
-          where: { email: normalizedEmail },
-        });
-
-        if (!existingEmployee) {
-          const invitation = await db.invitation.findFirst({
-            where: {
-              email: normalizedEmail,
-              status: "PENDING",
-              expiresAt: { gt: new Date() },
-            },
-          });
-
-          if (!invitation) {
-            throw new Error(
-              "Access denied: email domain not allowed and no invitation found"
-            );
-          }
-        }
-        isAllowed = true;
-      }
-
-      // Find or create employee
-      let employee = await db.employee.findUnique({
+      // Find employee with credentials
+      const employee = await db.employee.findUnique({
         where: { email: normalizedEmail },
+        include: {
+          credentials: true,
+          roleAssignments: {
+            where: {
+              OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+            },
+          },
+        },
       });
 
-      if (!employee) {
-        // Create new employee with PENDING status
-        employee = await db.employee.create({
-          data: {
-            email: normalizedEmail,
-            fullName: normalizedEmail.split("@")[0],
-            status: "PENDING",
-            isSyncedFromGoogle: false,
-            isExternal: !allowedDomains.includes(userDomain),
-            roleAssignments: {
-              create: {
-                role: "EMPLOYEE",
-              },
-            },
-          },
-        });
-
-        // Mark invitation as accepted if exists
-        await db.invitation.updateMany({
-          where: {
-            email: normalizedEmail,
-            status: "PENDING",
-          },
-          data: {
-            status: "ACCEPTED",
-            acceptedAt: new Date(),
-          },
-        });
+      if (!employee || !employee.credentials?.passwordHash) {
+        throw new Error("Invalid email or password");
       }
 
-      // Return user object for NextAuth
+      // Check if account is locked
+      if (
+        employee.credentials.lockedUntil &&
+        employee.credentials.lockedUntil > new Date()
+      ) {
+        throw new Error(
+          `Account locked. Try again after ${employee.credentials.lockedUntil.toLocaleTimeString()}`
+        );
+      }
+
+      // Verify password
+      const isValid = await bcrypt.compare(
+        password,
+        employee.credentials.passwordHash
+      );
+
+      if (!isValid) {
+        // Increment failed attempts
+        const failedAttempts = employee.credentials.failedAttempts + 1;
+        const shouldLock = failedAttempts >= 5;
+
+        await db.userCredentials.update({
+          where: { id: employee.credentials.id },
+          data: {
+            failedAttempts,
+            lockedUntil: shouldLock
+              ? new Date(Date.now() + 15 * 60 * 1000) // 15 minutes
+              : null,
+          },
+        });
+
+        if (shouldLock) {
+          throw new Error(
+            "Too many failed attempts. Account locked for 15 minutes."
+          );
+        }
+
+        throw new Error("Invalid email or password");
+      }
+
+      // Reset failed attempts on successful login
+      await db.userCredentials.update({
+        where: { id: employee.credentials.id },
+        data: {
+          failedAttempts: 0,
+          lockedUntil: null,
+          lastLoginAt: new Date(),
+        },
+      });
+
+      // Return user object with roles
       return {
         id: employee.id,
         email: employee.email,
         name: employee.fullName,
         image: employee.avatarUrl,
+        roles: employee.roleAssignments.map((ra) => ra.role),
       };
     },
   })
@@ -161,97 +149,21 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     error: "/login",
   },
   callbacks: {
-    async signIn({ user, account, profile }) {
-      // Credentials provider already handles everything
-      if (account?.provider === "email-login") {
-        return true;
-      }
-
-      // Google OAuth flow
-      if (!user.email) return false;
-
-      const allowedDomains = (process.env.ALLOWED_EMAIL_DOMAINS || "")
-        .split(",")
-        .map((d) => d.trim().toLowerCase());
-
-      const userDomain = user.email.split("@")[1]?.toLowerCase();
-
-      // Allow if domain matches OR if user already exists (external invited user)
-      if (!allowedDomains.includes(userDomain)) {
-        const existingEmployee = await db.employee.findUnique({
-          where: { email: user.email.toLowerCase() },
-        });
-
-        if (!existingEmployee) {
-          const invitation = await db.invitation.findFirst({
-            where: {
-              email: user.email.toLowerCase(),
-              status: "PENDING",
-              expiresAt: { gt: new Date() },
-            },
-          });
-
-          if (!invitation) {
-            console.log(
-              `Access denied for email: ${user.email} - domain not allowed and no invitation`
-            );
-            return false;
-          }
-        }
-      }
-
-      // JIT Provisioning: Create employee if doesn't exist
-      const existingEmployee = await db.employee.findUnique({
-        where: { email: user.email.toLowerCase() },
-      });
-
-      if (!existingEmployee) {
-        await db.employee.create({
-          data: {
-            email: user.email.toLowerCase(),
-            fullName: user.name || user.email.split("@")[0],
-            firstName: (profile?.given_name as string) || null,
-            lastName: (profile?.family_name as string) || null,
-            avatarUrl: user.image || null,
-            googleId: account?.providerAccountId || null,
-            status: "PENDING",
-            isSyncedFromGoogle: true,
-            lastSyncedAt: new Date(),
-            isExternal: !allowedDomains.includes(userDomain),
-            roleAssignments: {
-              create: {
-                role: "EMPLOYEE",
-              },
-            },
-          },
-        });
-
-        await db.invitation.updateMany({
-          where: {
-            email: user.email.toLowerCase(),
-            status: "PENDING",
-          },
-          data: {
-            status: "ACCEPTED",
-            acceptedAt: new Date(),
-          },
-        });
-      } else {
-        await db.employee.update({
-          where: { id: existingEmployee.id },
-          data: {
-            avatarUrl: user.image || existingEmployee.avatarUrl,
-            lastSyncedAt: new Date(),
-          },
-        });
-      }
-
+    async signIn({ user }) {
+      // All validation done in authorize()
       return true;
     },
 
     async jwt({ token, user }) {
-      // If this is a new sign-in via NextAuth provider
-      if (user) {
+      // If this is a new sign-in with roles already provided
+      if (user?.roles) {
+        token.id = user.id;
+        token.roles = user.roles as AppRole[];
+        return token;
+      }
+
+      // If roles not in user object, fetch from database
+      if (user && !user.roles) {
         const employee = await db.employee.findUnique({
           where: { email: user.email!.toLowerCase() },
           include: {
@@ -271,9 +183,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         }
       }
       
-      // Ensure token always has roles array (for custom login tokens)
-      if (!token.roles && token.id) {
-        token.roles = token.roles || ["EMPLOYEE"];
+      // Ensure token always has roles array
+      if (!token.roles) {
+        token.roles = ["EMPLOYEE"];
       }
       
       return token;
