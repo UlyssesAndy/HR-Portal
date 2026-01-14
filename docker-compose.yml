@@ -1,0 +1,121 @@
+# ================================
+# HR Portal - Docker Compose
+# Complete stack: App + PostgreSQL + Redis
+# ================================
+
+version: '3.8'
+
+services:
+  # ================================
+  # PostgreSQL Database
+  # ================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: hr-portal-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-hrportal}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-hrportal_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-hrportal}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/init-db.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-hrportal} -d ${POSTGRES_DB:-hrportal}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - hr-network
+
+  # ================================
+  # Redis Cache (for sessions/rate limiting)
+  # ================================
+  redis:
+    image: redis:7-alpine
+    container_name: hr-portal-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - hr-network
+
+  # ================================
+  # HR Portal Application
+  # ================================
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: hr-portal-app
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-hrportal}:${POSTGRES_PASSWORD:-hrportal_secret}@postgres:5432/${POSTGRES_DB:-hrportal}
+      REDIS_URL: redis://redis:6379
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      ALLOWED_EMAIL_DOMAINS: ${ALLOWED_EMAIL_DOMAINS:-}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - hr-network
+
+  # ================================
+  # Nginx Reverse Proxy (optional)
+  # ================================
+  nginx:
+    image: nginx:alpine
+    container_name: hr-portal-nginx
+    restart: unless-stopped
+    profiles:
+      - production
+    volumes:
+      - ./docker/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/ssl:/etc/nginx/ssl:ro
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - app
+    networks:
+      - hr-network
+
+# ================================
+# Volumes
+# ================================
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+# ================================
+# Networks
+# ================================
+networks:
+  hr-network:
+    driver: bridge

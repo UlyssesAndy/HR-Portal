@@ -1,0 +1,671 @@
+// HR Portal - Database Schema
+// Based on Engineering Blueprint v1.1
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions", "fullTextSearchPostgres"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [pg_trgm, pgcrypto]
+}
+
+// ===========================================
+// ENUMS
+// ===========================================
+
+enum EmployeeStatus {
+  ACTIVE
+  ON_LEAVE
+  MATERNITY
+  TERMINATED
+  PENDING
+}
+
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  CONTRACTOR
+  INTERN
+}
+
+enum SyncStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum SyncTrigger {
+  SCHEDULED
+  MANUAL
+  WEBHOOK
+}
+
+enum ChangeSource {
+  GOOGLE_SYNC
+  CSV_IMPORT
+  MANUAL
+  JIRA
+  SYSTEM
+}
+
+enum PendingAccessStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  EXPIRED
+}
+
+enum AppRole {
+  EMPLOYEE
+  MANAGER
+  HR
+  PAYROLL_FINANCE
+  ADMIN
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  REVOKED
+}
+
+// ===========================================
+// CORE TABLES
+// ===========================================
+
+// Google Workspace Tenant for multi-organization support
+model GoogleWorkspaceTenant {
+  id               String   @id @default(uuid()) @db.Uuid
+  name             String   @db.VarChar(200) // Display name (e.g., "Main Office")
+  domain           String   @unique @db.VarChar(255) // Primary domain (e.g., "company.com")
+  customerId       String?  @map("customer_id") @db.VarChar(50) // Google Customer ID
+  
+  // OAuth/Service Account credentials (encrypted)
+  serviceAccountEmail String?  @map("service_account_email") @db.VarChar(255)
+  serviceAccountKey   String?  @map("service_account_key") @db.Text // JSON key (encrypted)
+  adminEmail          String?  @map("admin_email") @db.VarChar(255) // Admin to impersonate
+  
+  // Sync settings
+  syncEnabled       Boolean  @default(true) @map("sync_enabled")
+  syncInterval      Int      @default(1440) @map("sync_interval") // Minutes (default: 24h)
+  lastSyncAt        DateTime? @map("last_sync_at") @db.Timestamptz
+  lastSyncStatus    String?  @map("last_sync_status") @db.VarChar(50)
+  
+  // Domain mapping
+  allowedDomains    String[] @map("allowed_domains") // Additional domains
+  autoProvision     Boolean  @default(true) @map("auto_provision") // Create users on login
+  defaultLegalEntityId String? @map("default_legal_entity_id") @db.Uuid
+  
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  
+  // Relations
+  defaultLegalEntity LegalEntity? @relation(fields: [defaultLegalEntityId], references: [id])
+  employees         Employee[]
+  syncRuns          SyncRun[]
+  
+  @@map("google_workspace_tenants")
+}
+
+model LegalEntity {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @unique @db.VarChar(200)
+  shortName String?  @map("short_name") @db.VarChar(50)
+  inn       String?  @unique @db.VarChar(20)
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  employees Employee[]
+  tenants   GoogleWorkspaceTenant[]
+
+  @@map("legal_entities")
+}
+
+model Department {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @unique @db.VarChar(100)
+  code      String?  @unique @db.VarChar(20)
+  parentId  String?  @map("parent_id") @db.Uuid
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  parent    Department?  @relation("DepartmentHierarchy", fields: [parentId], references: [id])
+  children  Department[] @relation("DepartmentHierarchy")
+  employees Employee[]
+  positions Position[]
+
+  @@map("departments")
+}
+
+model Position {
+  id           String   @id @default(uuid()) @db.Uuid
+  title        String   @db.VarChar(150)
+  departmentId String?  @map("department_id") @db.Uuid
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  department Department? @relation(fields: [departmentId], references: [id])
+  employees  Employee[]
+
+  @@unique([title, departmentId])
+  @@map("positions")
+}
+
+model Employee {
+  id        String  @id @default(uuid()) @db.Uuid
+  googleId  String? @unique @map("google_id") @db.VarChar(100)
+  email     String  @unique @db.VarChar(255)
+  fullName  String  @map("full_name") @db.VarChar(200)
+  firstName String? @map("first_name") @db.VarChar(100)
+  lastName  String? @map("last_name") @db.VarChar(100)
+  avatarUrl String? @map("avatar_url") @db.Text
+
+  // Organization
+  departmentId String? @map("department_id") @db.Uuid
+  positionId   String? @map("position_id") @db.Uuid
+  managerId    String? @map("manager_id") @db.Uuid
+
+  // HR Data
+  startDate       DateTime? @map("start_date") @db.Date
+  birthDate       DateTime? @map("birth_date") @db.Date
+  terminationDate DateTime? @map("termination_date") @db.Date
+
+  // Status
+  status          EmployeeStatus @default(PENDING)
+  statusStartDate DateTime?      @map("status_start_date") @db.Date
+  statusEndDate   DateTime?      @map("status_end_date") @db.Date
+  statusNote      String?        @map("status_note") @db.Text
+
+  // Contact
+  phone           String? @db.VarChar(50)
+  messengerHandle String? @map("messenger_handle") @db.VarChar(100)
+
+  // Location
+  location String? @db.VarChar(100)
+  timezone String? @db.VarChar(50)
+
+  // Employment details (restricted)
+  employmentType EmploymentType? @map("employment_type")
+  legalEntityId  String?         @map("legal_entity_id") @db.Uuid
+
+  // Sync metadata
+  isSyncedFromGoogle   Boolean   @default(false) @map("is_synced_from_google")
+  lastSyncedAt         DateTime? @map("last_synced_at") @db.Timestamptz
+  manualOverrideFields Json      @default("[]") @map("manual_override_fields")
+  tenantId             String?   @map("tenant_id") @db.Uuid
+
+  // External user flag
+  isExternal Boolean @default(false) @map("is_external")
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  department           Department?       @relation(fields: [departmentId], references: [id])
+  position             Position?         @relation(fields: [positionId], references: [id])
+  manager              Employee?         @relation("ManagerRelation", fields: [managerId], references: [id])
+  directReports        Employee[]        @relation("ManagerRelation")
+  legalEntity          LegalEntity?      @relation(fields: [legalEntityId], references: [id])
+  tenant               GoogleWorkspaceTenant? @relation(fields: [tenantId], references: [id])
+  history              EmployeeHistory[]
+  changedHistory       EmployeeHistory[] @relation("ChangedBy")
+  roleAssignments      RoleAssignment[]
+  grantedRoles         RoleAssignment[]  @relation("GrantedBy")
+  syncRuns             SyncRun[]         @relation("TriggeredBy")
+  syncErrors           SyncError[]       @relation("ResolvedBy")
+  problemRecords       ProblemRecord[]
+  resolvedProblems     ProblemRecord[]   @relation("ResolvedBy")
+  pendingAccessReviews PendingAccess[]   @relation("ReviewedBy")
+  linkedPendingAccess  PendingAccess[]   @relation("LinkedEmployee")
+  auditEvents          AuditEvent[]
+  csvImports           CsvImport[]
+  invitations          Invitation[]      @relation("InvitedBy")
+  linkedInvitation     Invitation?       @relation("InvitationEmployee")
+  credentials          UserCredentials?
+
+  @@map("employees")
+}
+
+model EmployeeHistory {
+  id           String       @id @default(uuid()) @db.Uuid
+  employeeId   String       @map("employee_id") @db.Uuid
+  fieldName    String       @map("field_name") @db.VarChar(50)
+  oldValue     String?      @map("old_value") @db.Text
+  newValue     String?      @map("new_value") @db.Text
+  changedAt    DateTime     @default(now()) @map("changed_at") @db.Timestamptz
+  changedById  String?      @map("changed_by_id") @db.Uuid
+  changeSource ChangeSource @map("change_source")
+  changeNote   String?      @map("change_note") @db.Text
+  isCorrection Boolean      @default(false) @map("is_correction")
+
+  // Relations
+  employee  Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  changedBy Employee? @relation("ChangedBy", fields: [changedById], references: [id])
+
+  @@index([employeeId])
+  @@index([changedAt(sort: Desc)])
+  @@index([fieldName])
+  @@map("employee_history")
+}
+
+model RoleAssignment {
+  id                String    @id @default(uuid()) @db.Uuid
+  employeeId        String    @map("employee_id") @db.Uuid
+  role              AppRole
+  googleGroupSource String?   @map("google_group_source") @db.VarChar(255)
+  isManualOverride  Boolean   @default(false) @map("is_manual_override")
+  grantedById       String?   @map("granted_by_id") @db.Uuid
+  grantedAt         DateTime  @default(now()) @map("granted_at") @db.Timestamptz
+  expiresAt         DateTime? @map("expires_at") @db.Timestamptz
+
+  // Relations
+  employee  Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  grantedBy Employee? @relation("GrantedBy", fields: [grantedById], references: [id])
+
+  @@unique([employeeId, role])
+  @@index([employeeId])
+  @@index([role])
+  @@map("role_assignments")
+}
+
+model GoogleGroupRoleMapping {
+  id               String   @id @default(uuid()) @db.Uuid
+  googleGroupEmail String   @unique @map("google_group_email") @db.VarChar(255)
+  role             AppRole
+  isActive         Boolean  @default(true) @map("is_active")
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@map("google_group_role_mappings")
+}
+
+// ===========================================
+// SERVICE CATALOG
+// ===========================================
+
+model ServiceCategory {
+  id        String  @id @default(uuid()) @db.Uuid
+  name      String  @unique @db.VarChar(100)
+  sortOrder Int     @default(0) @map("sort_order")
+  isActive  Boolean @default(true) @map("is_active")
+
+  // Relations
+  services ServiceLink[]
+
+  @@map("service_categories")
+}
+
+model ServiceLink {
+  id          String   @id @default(uuid()) @db.Uuid
+  title       String   @db.VarChar(150)
+  description String?  @db.Text
+  url         String   @db.Text
+  iconUrl     String?  @map("icon_url") @db.Text
+  categoryId  String?  @map("category_id") @db.Uuid
+  sortOrder   Int      @default(0) @map("sort_order")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  category     ServiceCategory?  @relation(fields: [categoryId], references: [id])
+  visibleRoles ServiceLinkRole[]
+
+  @@map("service_links")
+}
+
+model ServiceLinkRole {
+  serviceLinkId String  @map("service_link_id") @db.Uuid
+  role          AppRole
+
+  // Relations
+  serviceLink ServiceLink @relation(fields: [serviceLinkId], references: [id], onDelete: Cascade)
+
+  @@id([serviceLinkId, role])
+  @@map("service_link_roles")
+}
+
+// ===========================================
+// SYNC & OPERATIONS
+// ===========================================
+
+model SyncRun {
+  id            String      @id @default(uuid()) @db.Uuid
+  trigger       SyncTrigger
+  triggeredById String?     @map("triggered_by_id") @db.Uuid
+  tenantId      String?     @map("tenant_id") @db.Uuid
+  status        SyncStatus  @default(PENDING)
+  startedAt     DateTime?   @map("started_at") @db.Timestamptz
+  completedAt   DateTime?   @map("completed_at") @db.Timestamptz
+
+  // Stats
+  usersProcessed   Int @default(0) @map("users_processed")
+  usersCreated     Int @default(0) @map("users_created")
+  usersUpdated     Int @default(0) @map("users_updated")
+  usersDeactivated Int @default(0) @map("users_deactivated")
+  errorsCount      Int @default(0) @map("errors_count")
+
+  // Metadata
+  googleSyncToken String? @map("google_sync_token") @db.Text
+  notes           String? @db.Text
+
+  // Relations
+  triggeredBy Employee?              @relation("TriggeredBy", fields: [triggeredById], references: [id])
+  tenant      GoogleWorkspaceTenant? @relation(fields: [tenantId], references: [id])
+  errors      SyncError[]
+
+  @@index([status])
+  @@index([startedAt(sort: Desc)])
+  @@map("sync_runs")
+}
+
+model SyncError {
+  id              String    @id @default(uuid()) @db.Uuid
+  syncRunId       String    @map("sync_run_id") @db.Uuid
+  employeeId      String?   @map("employee_id") @db.Uuid
+  googleUserEmail String?   @map("google_user_email") @db.VarChar(255)
+  errorType       String    @map("error_type") @db.VarChar(50)
+  errorMessage    String    @map("error_message") @db.Text
+  errorDetails    Json?     @map("error_details")
+  isResolved      Boolean   @default(false) @map("is_resolved")
+  resolvedAt      DateTime? @map("resolved_at") @db.Timestamptz
+  resolvedById    String?   @map("resolved_by_id") @db.Uuid
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  syncRun    SyncRun   @relation(fields: [syncRunId], references: [id], onDelete: Cascade)
+  resolvedBy Employee? @relation("ResolvedBy", fields: [resolvedById], references: [id])
+
+  @@index([syncRunId])
+  @@index([isResolved])
+  @@map("sync_errors")
+}
+
+model ProblemRecord {
+  id             String       @id @default(uuid()) @db.Uuid
+  employeeId     String?      @map("employee_id") @db.Uuid
+  problemType    String       @map("problem_type") @db.VarChar(50)
+  description    String       @db.Text
+  details        Json?
+  source         ChangeSource
+  isResolved     Boolean      @default(false) @map("is_resolved")
+  resolvedAt     DateTime?    @map("resolved_at") @db.Timestamptz
+  resolvedById   String?      @map("resolved_by_id") @db.Uuid
+  resolutionNote String?      @map("resolution_note") @db.Text
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  employee   Employee? @relation(fields: [employeeId], references: [id])
+  resolvedBy Employee? @relation("ResolvedBy", fields: [resolvedById], references: [id])
+
+  @@index([isResolved])
+  @@map("problem_records")
+}
+
+// ===========================================
+// EXTERNAL USERS & INVITATIONS
+// ===========================================
+
+model Invitation {
+  id          String           @id @default(uuid()) @db.Uuid
+  email       String           @db.VarChar(255)
+  fullName    String?          @map("full_name") @db.VarChar(200)
+  inviteToken String           @unique @map("invite_token") @db.VarChar(100)
+  invitedById String           @map("invited_by_id") @db.Uuid
+  note        String?          @db.Text
+  status      InvitationStatus @default(PENDING)
+  expiresAt   DateTime         @map("expires_at") @db.Timestamptz
+  acceptedAt  DateTime?        @map("accepted_at") @db.Timestamptz
+  createdAt   DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  employeeId  String?          @unique @map("employee_id") @db.Uuid
+
+  // Relations
+  invitedBy Employee  @relation("InvitedBy", fields: [invitedById], references: [id])
+  employee  Employee? @relation("InvitationEmployee", fields: [employeeId], references: [id])
+
+  @@index([email])
+  @@index([inviteToken])
+  @@index([status])
+  @@map("invitations")
+}
+
+model PendingAccess {
+  id              String              @id @default(uuid()) @db.Uuid
+  email           String              @unique @db.VarChar(255)
+  fullName        String?             @map("full_name") @db.VarChar(200)
+  source          ChangeSource
+  sourceReference String?             @map("source_reference") @db.Text
+  status          PendingAccessStatus @default(PENDING)
+  employeeId      String?             @map("employee_id") @db.Uuid
+  requestedAt     DateTime            @default(now()) @map("requested_at") @db.Timestamptz
+  reviewedById    String?             @map("reviewed_by_id") @db.Uuid
+  reviewedAt      DateTime?           @map("reviewed_at") @db.Timestamptz
+  reviewNote      String?             @map("review_note") @db.Text
+  expiresAt       DateTime?           @map("expires_at") @db.Timestamptz
+
+  // Relations
+  employee   Employee? @relation("LinkedEmployee", fields: [employeeId], references: [id])
+  reviewedBy Employee? @relation("ReviewedBy", fields: [reviewedById], references: [id])
+
+  @@index([status])
+  @@index([email])
+  @@map("pending_access")
+}
+
+// ===========================================
+// AUDIT
+// ===========================================
+
+model AuditEvent {
+  id             String   @id @default(uuid()) @db.Uuid
+  actorId        String?  @map("actor_id") @db.Uuid
+  actorEmail     String?  @map("actor_email") @db.VarChar(255)
+  actorIp        String?  @map("actor_ip") @db.VarChar(45)
+  actorUserAgent String?  @map("actor_user_agent") @db.Text
+  action         String   @db.VarChar(100)
+  resourceType   String   @map("resource_type") @db.VarChar(50)
+  resourceId     String?  @map("resource_id") @db.Uuid
+  oldValues      Json?    @map("old_values")
+  newValues      Json?    @map("new_values")
+  metadata       Json?
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  actor Employee? @relation(fields: [actorId], references: [id])
+  notificationReads NotificationRead[]
+
+  @@index([actorId])
+  @@index([resourceType, resourceId])
+  @@index([createdAt(sort: Desc)])
+  @@index([action])
+  @@map("audit_events")
+}
+
+// ===========================================
+// CSV IMPORT
+// ===========================================
+
+model CsvImport {
+  id              String    @id @default(uuid()) @db.Uuid
+  filename        String    @db.VarChar(255)
+  uploadedById    String    @map("uploaded_by_id") @db.Uuid
+  dryRunAt        DateTime? @map("dry_run_at") @db.Timestamptz
+  dryRunValidRows Int?      @map("dry_run_valid_rows")
+  dryRunErrorRows Int?      @map("dry_run_error_rows")
+  dryRunErrors    Json?     @map("dry_run_errors")
+  committedAt     DateTime? @map("committed_at") @db.Timestamptz
+  rowsImported    Int?      @map("rows_imported")
+  rowsUpdated     Int?      @map("rows_updated")
+  rowsSkipped     Int?      @map("rows_skipped")
+  status          String    @default("uploaded") @db.VarChar(20)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  uploadedBy Employee @relation(fields: [uploadedById], references: [id])
+
+  @@map("csv_imports")
+}
+
+// ===========================================
+// FIELD VISIBILITY CONFIGURATION
+// ===========================================
+
+model FieldVisibilityConfig {
+  id        String   @id @default(uuid()) @db.Uuid
+  fieldName String   @map("field_name") @db.VarChar(50)
+  role      AppRole
+  isVisible Boolean  @default(true) @map("is_visible")
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@unique([fieldName, role])
+  @@map("field_visibility_config")
+}
+
+// ===========================================
+// JIRA WEBHOOK TRACKING
+// ===========================================
+
+model JiraWebhookEvent {
+  id          String   @id @default(uuid()) @db.Uuid
+  webhookId   String   @unique @map("webhook_id") @db.VarChar(255)
+  eventType   String   @map("event_type") @db.VarChar(100)
+  issueKey    String?  @map("issue_key") @db.VarChar(50)
+  payload     Json
+  processedAt DateTime @default(now()) @map("processed_at") @db.Timestamptz
+  status      String   @default("processed") @db.VarChar(20)
+
+  @@index([webhookId])
+  @@index([processedAt(sort: Desc)])
+  @@map("jira_webhook_events")
+}
+
+// ===========================================
+// AUTHENTICATION & SECURITY
+// ===========================================
+
+model UserCredentials {
+  id           String    @id @default(uuid()) @db.Uuid
+  employeeId   String    @unique @map("employee_id") @db.Uuid
+  
+  // Password authentication
+  passwordHash String?   @map("password_hash") @db.VarChar(255)
+  passwordSetAt DateTime? @map("password_set_at") @db.Timestamptz
+  
+  // 2FA TOTP
+  totpSecret   String?   @map("totp_secret") @db.VarChar(255)
+  totpEnabled  Boolean   @default(false) @map("totp_enabled")
+  totpEnabledAt DateTime? @map("totp_enabled_at") @db.Timestamptz
+  backupCodes  Json?     @map("backup_codes") // Encrypted array of backup codes
+  
+  // Magic link
+  magicLinkToken     String?   @map("magic_link_token") @db.VarChar(255)
+  magicLinkExpiresAt DateTime? @map("magic_link_expires_at") @db.Timestamptz
+  
+  // Security
+  failedAttempts     Int       @default(0) @map("failed_attempts")
+  lockedUntil        DateTime? @map("locked_until") @db.Timestamptz
+  lastLoginAt        DateTime? @map("last_login_at") @db.Timestamptz
+  lastLoginIp        String?   @map("last_login_ip") @db.VarChar(45)
+  
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  sessions UserSession[]
+
+  @@index([magicLinkToken])
+  @@map("user_credentials")
+}
+
+model UserSession {
+  id            String   @id @default(uuid()) @db.Uuid
+  credentialsId String   @map("credentials_id") @db.Uuid
+  
+  sessionToken  String   @unique @map("session_token") @db.VarChar(255)
+  deviceInfo    String?  @map("device_info") @db.VarChar(500)
+  ipAddress     String?  @map("ip_address") @db.VarChar(45)
+  userAgent     String?  @map("user_agent") @db.Text
+  
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+  expiresAt     DateTime @map("expires_at") @db.Timestamptz
+  lastActiveAt  DateTime @default(now()) @map("last_active_at") @db.Timestamptz
+  revokedAt     DateTime? @map("revoked_at") @db.Timestamptz
+
+  // Relations
+  credentials UserCredentials @relation(fields: [credentialsId], references: [id], onDelete: Cascade)
+
+  @@index([sessionToken])
+  @@index([credentialsId])
+  @@index([isActive])
+  @@map("user_sessions")
+}
+
+// System Integration Settings (key-value store for configs)
+model IntegrationSetting {
+  id          String   @id @default(uuid()) @db.Uuid
+  category    String   @db.VarChar(50) // e.g., "mattermost", "smtp", "jira"
+  key         String   @db.VarChar(100)
+  value       String?  @db.Text
+  isSecret    Boolean  @default(false) @map("is_secret") // Mask in UI
+  description String?  @db.VarChar(255)
+  
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@unique([category, key])
+  @@map("integration_settings")
+}
+
+// SSO Configuration
+model SsoProvider {
+  id           String   @id @default(uuid()) @db.Uuid
+  name         String   @unique @db.VarChar(100)
+  type         String   @db.VarChar(20) // "saml" or "oidc"
+  
+  // SAML config
+  entityId     String?  @map("entity_id") @db.Text
+  ssoUrl       String?  @map("sso_url") @db.Text
+  certificate  String?  @db.Text
+  
+  // OIDC config
+  clientId     String?  @map("client_id") @db.VarChar(255)
+  clientSecret String?  @map("client_secret") @db.VarChar(255)
+  issuerUrl    String?  @map("issuer_url") @db.Text
+  
+  // Common
+  isActive     Boolean  @default(true) @map("is_active")
+  allowedDomains String? @map("allowed_domains") @db.Text // Comma-separated
+  
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@map("sso_providers")
+}
+
+// Notification Read State - tracks which audit events user has read
+model NotificationRead {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  eventId      String   @map("event_id") @db.Uuid
+  readAt       DateTime @default(now()) @map("read_at") @db.Timestamptz
+
+  event        AuditEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, eventId])
+  @@index([userId])
+  @@map("notification_reads")
+}
