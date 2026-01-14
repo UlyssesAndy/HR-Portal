@@ -64,7 +64,7 @@ async function getEditData() {
 }
 
 async function getEmployeeHistory(employeeId: string) {
-  return db.employeeHistory.findMany({
+  const history = await db.employeeHistory.findMany({
     where: { employeeId },
     include: {
       changedBy: { select: { id: true, fullName: true } },
@@ -72,6 +72,94 @@ async function getEmployeeHistory(employeeId: string) {
     orderBy: { changedAt: "desc" },
     take: 50,
   });
+
+  // Resolve IDs to names for better display
+  const enrichedHistory = await Promise.all(
+    history.map(async (item) => {
+      let displayOldValue = item.oldValue;
+      let displayNewValue = item.newValue;
+
+      // Resolve department names
+      if (item.fieldName === "departmentId") {
+        if (item.oldValue) {
+          const oldDept = await db.department.findUnique({
+            where: { id: item.oldValue },
+            select: { name: true },
+          });
+          displayOldValue = oldDept?.name || item.oldValue;
+        }
+        if (item.newValue) {
+          const newDept = await db.department.findUnique({
+            where: { id: item.newValue },
+            select: { name: true },
+          });
+          displayNewValue = newDept?.name || item.newValue;
+        }
+      }
+
+      // Resolve position names
+      if (item.fieldName === "positionId") {
+        if (item.oldValue) {
+          const oldPos = await db.position.findUnique({
+            where: { id: item.oldValue },
+            select: { title: true },
+          });
+          displayOldValue = oldPos?.title || item.oldValue;
+        }
+        if (item.newValue) {
+          const newPos = await db.position.findUnique({
+            where: { id: item.newValue },
+            select: { title: true },
+          });
+          displayNewValue = newPos?.title || item.newValue;
+        }
+      }
+
+      // Resolve manager names
+      if (item.fieldName === "managerId") {
+        if (item.oldValue) {
+          const oldMgr = await db.employee.findUnique({
+            where: { id: item.oldValue },
+            select: { fullName: true },
+          });
+          displayOldValue = oldMgr?.fullName || item.oldValue;
+        }
+        if (item.newValue) {
+          const newMgr = await db.employee.findUnique({
+            where: { id: item.newValue },
+            select: { fullName: true },
+          });
+          displayNewValue = newMgr?.fullName || item.newValue;
+        }
+      }
+
+      // Resolve legal entity names
+      if (item.fieldName === "legalEntityId") {
+        if (item.oldValue) {
+          const oldLE = await db.legalEntity.findUnique({
+            where: { id: item.oldValue },
+            select: { name: true, shortName: true },
+          });
+          displayOldValue = oldLE?.shortName || oldLE?.name || item.oldValue;
+        }
+        if (item.newValue) {
+          const newLE = await db.legalEntity.findUnique({
+            where: { id: item.newValue },
+            select: { name: true, shortName: true },
+          });
+          displayNewValue = newLE?.shortName || newLE?.name || item.newValue;
+        }
+      }
+
+      return {
+        ...item,
+        oldValue: displayOldValue,
+        newValue: displayNewValue,
+      };
+    })
+  );
+
+  return enrichedHistory;
 }
 
 const statusColors: Record<string, "success" | "warning" | "secondary" | "default"> = {
