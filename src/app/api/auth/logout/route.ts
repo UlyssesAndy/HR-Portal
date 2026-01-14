@@ -58,7 +58,10 @@ export async function POST(request: NextRequest) {
     cookieStore.delete("authjs.callback-url");
     
     // Redirect to login with cache-busting headers
-    const response = NextResponse.redirect(new URL("/login", request.url));
+    const loginUrl = process.env.NEXTAUTH_URL 
+      ? `${process.env.NEXTAUTH_URL}/login`
+      : new URL("/login", request.url).toString();
+    const response = NextResponse.redirect(loginUrl);
     
     // Prevent browser from caching authenticated pages
     response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
@@ -70,7 +73,10 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("Logout error:", error);
     // Even on error, redirect to login
-    const response = NextResponse.redirect(new URL("/login", request.url));
+    const loginUrl = process.env.NEXTAUTH_URL 
+      ? `${process.env.NEXTAUTH_URL}/login`
+      : new URL("/login", request.url).toString();
+    const response = NextResponse.redirect(loginUrl);
     response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
     return response;
   }
