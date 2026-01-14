@@ -562,6 +562,7 @@ model UserCredentials {
   // Password authentication
   passwordHash String?   @map("password_hash") @db.VarChar(255)
   passwordSetAt DateTime? @map("password_set_at") @db.Timestamptz
+  requirePasswordChange Boolean @default(false) @map("require_password_change")
   
   // 2FA TOTP
   totpSecret   String?   @map("totp_secret") @db.VarChar(255)

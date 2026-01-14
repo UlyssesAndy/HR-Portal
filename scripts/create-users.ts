@@ -82,6 +82,7 @@ async function main() {
             create: {
               passwordHash: hashedPassword,
               passwordSetAt: new Date(),
+              requirePasswordChange: true,
             },
           },
           roleAssignments: {

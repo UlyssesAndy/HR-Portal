@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
 import { Sidebar } from "@/components/layout/sidebar";
 import { CommandPalette } from "@/components/command-palette/command-palette";
 import { ToastProvider } from "@/components/ui/toast";
@@ -15,6 +16,16 @@ export default async function DashboardLayout({
 
   if (!session?.user) {
     redirect("/login");
+  }
+
+  // Check if user needs to change password
+  const employee = await db.employee.findUnique({
+    where: { id: session.user.id },
+    include: { credentials: true },
+  });
+
+  if (employee?.credentials?.requirePasswordChange) {
+    redirect("/change-password");
   }
 
   return (
