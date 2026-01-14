@@ -72,6 +72,21 @@ providers.push(
       });
 
       if (!employee || !employee.credentials?.passwordHash) {
+        // Log failed attempt for unknown email
+        await db.auditEvent.create({
+          data: {
+            actorId: null,
+            actorEmail: normalizedEmail,
+            action: "auth.login_failed",
+            resourceType: "employee",
+            resourceId: null,
+            metadata: {
+              reason: "invalid_credentials",
+              email: normalizedEmail,
+            },
+          },
+        });
+        
         throw new Error("Invalid email or password");
       }
 
@@ -103,6 +118,22 @@ providers.push(
             lockedUntil: shouldLock
               ? new Date(Date.now() + 15 * 60 * 1000) // 15 minutes
               : null,
+          },
+        });
+
+        // Log failed attempt
+        await db.auditEvent.create({
+          data: {
+            actorId: employee.id,
+            actorEmail: email,
+            action: "auth.login_failed",
+            resourceType: "employee",
+            resourceId: employee.id,
+            metadata: {
+              reason: "invalid_password",
+              failedAttempts,
+              locked: shouldLock,
+            },
           },
         });
 
