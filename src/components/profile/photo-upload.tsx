@@ -10,6 +10,7 @@ interface PhotoUploadProps {
   employeeName: string;
   onUploadSuccess?: (newUrl: string) => void;
   disabled?: boolean;
+  size?: "sm" | "md" | "lg";
 }
 
 export function PhotoUpload({ 
@@ -17,7 +18,8 @@ export function PhotoUpload({
   currentPhotoUrl, 
   employeeName, 
   onUploadSuccess,
-  disabled = false 
+  disabled = false,
+  size = "md"
 }: PhotoUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -68,6 +70,8 @@ export function PhotoUpload({
 
       const data = await res.json();
       onUploadSuccess?.(data.url);
+      // Refresh page to update avatar
+      window.location.reload();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed");
       setPreviewUrl(null);
@@ -86,6 +90,18 @@ export function PhotoUpload({
 
   const displayUrl = previewUrl || currentPhotoUrl;
 
+  const sizeClasses = {
+    sm: "h-24 w-24",
+    md: "h-32 w-32 text-3xl",
+    lg: "h-40 w-40 text-4xl"
+  };
+
+  const iconSizes = {
+    sm: "h-5 w-5",
+    md: "h-6 w-6",
+    lg: "h-8 w-8"
+  };
+
   return (
     <div className="relative group">
       <input
@@ -102,7 +118,7 @@ export function PhotoUpload({
         <UserAvatar
           name={employeeName}
           imageUrl={displayUrl}
-          className="h-24 w-24 ring-4 ring-white shadow-lg"
+          className={`${sizeClasses[size]} ring-4 ring-white/30 shadow-2xl`}
         />
         
         {/* Upload overlay */}
@@ -113,9 +129,9 @@ export function PhotoUpload({
             className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
           >
             {isUploading ? (
-              <Loader2 className="h-6 w-6 text-white animate-spin" />
+              <Loader2 className={`${iconSizes[size]} text-white animate-spin`} />
             ) : (
-              <Camera className="h-6 w-6 text-white" />
+              <Camera className={`${iconSizes[size]} text-white`} />
             )}
           </button>
         )}
@@ -133,14 +149,14 @@ export function PhotoUpload({
       
       {/* Status text */}
       {!disabled && (
-        <p className="mt-2 text-xs text-slate-500 text-center">
-          {isUploading ? "Uploading..." : "Click to change photo"}
+        <p className="mt-2 text-xs text-white/80 text-center">
+          {isUploading ? "Uploading..." : "Hover to change photo"}
         </p>
       )}
       
       {/* Error message */}
       {error && (
-        <p className="mt-1 text-xs text-red-500 text-center">{error}</p>
+        <p className="mt-1 text-xs text-red-200 text-center font-medium bg-red-500/20 px-2 py-1 rounded">{error}</p>
       )}
     </div>
   );

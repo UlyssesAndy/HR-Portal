@@ -8,6 +8,7 @@ import { ProfileEditButton } from "@/components/profile/profile-edit-button";
 import { ProfileSelfEdit } from "@/components/profile/profile-self-edit";
 import { EmployeeHistoryClient } from "@/components/profile/employee-history-client";
 import { QuickActions } from "@/components/profile/quick-actions";
+import { PhotoUpload } from "@/components/profile/photo-upload";
 import Link from "next/link";
 import { 
   Mail, Phone, MapPin, Calendar, Building2, Briefcase, 
@@ -265,11 +266,20 @@ export default async function ProfilePage({ params }: PageProps) {
         <div className="absolute -bottom-32 -left-32 h-64 w-64 rounded-full bg-cyan-400/10 blur-3xl" />
         
         <div className="relative flex flex-col md:flex-row items-center gap-6">
-          <UserAvatar
-            name={employee.fullName}
-            imageUrl={employee.avatarUrl}
-            className="h-32 w-32 text-4xl ring-4 ring-white/30 shadow-2xl"
-          />
+          {isOwnProfile ? (
+            <PhotoUpload
+              employeeId={employee.id}
+              currentPhotoUrl={employee.avatarUrl}
+              employeeName={employee.fullName}
+              size="lg"
+            />
+          ) : (
+            <UserAvatar
+              name={employee.fullName}
+              imageUrl={employee.avatarUrl}
+              className="h-32 w-32 text-4xl ring-4 ring-white/30 shadow-2xl"
+            />
+          )}
           
           <div className="text-center md:text-left">
             <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 mb-2">
