@@ -174,6 +174,18 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   trustHost: true,
   session: {
     strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+  },
+  cookies: {
+    sessionToken: {
+      name: `authjs.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV === 'production',
+      }
+    },
   },
   pages: {
     signIn: "/login",
@@ -198,40 +210,23 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
 
     async jwt({ token, user }) {
-      // If this is a new sign-in with roles already provided
-      if (user?.roles) {
+      // Store minimal data in token
+      if (user) {
         token.id = user.id;
-        token.roles = user.roles as AppRole[];
-        return token;
-      }
-
-      // If roles not in user object, fetch from database
-      if (user && !user.roles) {
-        const employee = await db.employee.findUnique({
-          where: { email: user.email!.toLowerCase() },
-          include: {
-            roleAssignments: {
-              where: {
-                OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
-              },
-            },
-          },
-        });
-
-        if (employee) {
-          token.id = employee.id;
-          token.roles = employee.roleAssignments.map(
-            (ra: { role: AppRole }) => ra.role
-          );
-        }
+        token.roles = user.roles || ["EMPLOYEE"];
       }
       
-      // Ensure token always has roles array
-      if (!token.roles) {
-        token.roles = ["EMPLOYEE"];
-      }
-      
-      return token;
+      // Keep token minimal - only essential fields
+      return {
+        sub: token.sub,
+        id: token.id,
+        email: token.email,
+        name: token.name,
+        roles: token.roles || ["EMPLOYEE"],
+        iat: token.iat,
+        exp: token.exp,
+        jti: token.jti,
+      };
     },
 
     async session({ session, token }) {
