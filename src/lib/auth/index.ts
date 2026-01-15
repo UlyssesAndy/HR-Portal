@@ -146,11 +146,42 @@ providers.push(
         throw new Error("Invalid email or password");
       }
 
-      // CRITICAL: Skip 2FA check - not implemented in login form
-      // TODO: Add 2FA support to login form or disable 2FA in production
-      // if (employee.credentials.totpEnabled) {
-      //   throw new Error("2FA not supported in this login flow");
-      // }
+      // Check 2FA if enabled
+      if (employee.credentials.totpEnabled) {
+        if (!totpCode) {
+          throw new Error("2FA code required");
+        }
+
+        // Verify TOTP code
+        try {
+          const { verifyTotpToken } = await import("@/lib/auth/totp");
+          const isValidTotp = verifyTotpToken(
+            totpCode,
+            employee.credentials.totpSecret!
+          );
+
+          if (!isValidTotp) {
+            // Check backup codes as fallback
+            const backupCodes = (employee.credentials.backupCodes as string[]) || [];
+            const normalizedCode = totpCode.replace("-", "").toUpperCase();
+            const codeIndex = backupCodes.indexOf(normalizedCode);
+
+            if (codeIndex === -1) {
+              throw new Error("Invalid 2FA code");
+            }
+
+            // Remove used backup code
+            backupCodes.splice(codeIndex, 1);
+            await db.userCredentials.update({
+              where: { id: employee.credentials.id },
+              data: { backupCodes },
+            });
+          }
+        } catch (importError) {
+          console.error("Failed to import TOTP library:", importError);
+          throw new Error("2FA verification failed");
+        }
+      }
 
       // Reset failed attempts on successful login
       await db.userCredentials.update({

@@ -23,6 +23,8 @@ function LoginForm() {
   const [loginMethod, setLoginMethod] = useState<LoginMethod>("select");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [totpCode, setTotpCode] = useState("");
+  const [requires2FA, setRequires2FA] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -64,23 +66,35 @@ function LoginForm() {
   const resetForm = () => {
     setError(null);
     setPassword("");
+    setTotpCode("");
+    setRequires2FA(false);
   };
 
-  // Password login via NextAuth
+  // Password login with 2FA support
   const handlePasswordLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setIsLoading(true);
 
     try {
+      // Try credentials provider with 2FA code if provided
       const result = await signIn("credentials", {
         email: email.trim().toLowerCase(),
         password,
+        totpCode: totpCode || undefined,
         redirect: false,
       });
 
       if (result?.error) {
+        // Check if error is about 2FA requirement
+        if (result.error.includes("2FA") || result.error.includes("code required")) {
+          setRequires2FA(true);
+          setError("Please enter your 2FA code");
+          setIsLoading(false);
+          return;
+        }
         setError(result.error);
+        setIsLoading(false);
         return;
       }
 
@@ -218,17 +232,37 @@ function LoginForm() {
                   />
                 </div>
                 
-                {/* 2FA removed for now */}
+                {/* 2FA Code Field - shows when 2FA is required */}
+                {requires2FA && (
+                  <div className="space-y-2">
+                    <label htmlFor="totpCode" className="text-sm font-medium text-slate-300">
+                      2FA Code
+                    </label>
+                    <Input
+                      id="totpCode"
+                      type="text"
+                      placeholder="123456"
+                      value={totpCode}
+                      onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      required={requires2FA}
+                      disabled={isLoading}
+                      maxLength={6}
+                      className="bg-slate-800/50 border-slate-700 text-white placeholder:text-slate-500 focus:border-amber-500 focus:ring-amber-500/20 rounded-xl h-12 text-center text-2xl tracking-widest"
+                      autoFocus
+                    />
+                    <p className="text-xs text-slate-400">Enter the 6-digit code from your authenticator app</p>
+                  </div>
+                )}
 
                 <button
                   type="submit"
-                  disabled={isLoading || !email || !password}
+                  disabled={isLoading || !email || !password || (requires2FA && totpCode.length !== 6)}
                   className="w-full h-12 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold shadow-lg shadow-amber-500/30 hover:shadow-amber-500/50 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {isLoading ? (
                     <><Loader2 className="h-5 w-5 animate-spin" /> Signing in...</>
                   ) : (
-                    <><Lock className="h-5 w-5" /> Sign In</>
+                    <><Lock className="h-5 w-5" /> {requires2FA ? 'Verify 2FA' : 'Sign In'}</>
                   )}
                 </button>
               </form>
