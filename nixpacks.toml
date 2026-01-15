@@ -1,0 +1,21 @@
+# Force fresh build - timestamp: 2026-01-15 16:46
+[phases.setup]
+nixPkgs = ["nodejs_20"]
+
+[phases.install]
+cmds = [
+  "echo 'Installing dependencies...'",
+  "npm ci --prefer-offline --no-audit",
+  "echo 'Install complete!'"
+]
+
+[phases.build]
+cmds = [
+  "echo 'Building Next.js application...'",
+  "npx prisma generate",
+  "npm run build",
+  "echo 'Build complete!'"
+]
+
+[start]
+cmd = "npm run start"
