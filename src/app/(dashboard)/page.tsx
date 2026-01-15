@@ -8,6 +8,7 @@ import { AnalyticsSection } from "@/components/dashboard/analytics-section";
 import { ActivityFeed } from "@/components/dashboard/activity-feed";
 import { BirthdayWidget } from "@/components/dashboard/birthday-widget";
 import { RecentEmployeesWidget } from "@/components/dashboard/recent-employees-widget";
+import { getPageConfig, renderPageConfig } from "@/lib/page-renderer";
 import { 
   Users, Building2, ExternalLink, Clock, CheckCircle2, 
   AlertTriangle, Link2
@@ -114,6 +115,37 @@ export default async function HomePage() {
   
   const user = session.user;
   const isHRorAdmin = user.roles?.includes("HR") || user.roles?.includes("ADMIN");
+  
+  // Check for custom page layout
+  const customLayout = await getPageConfig("dashboard");
+  
+  // If custom layout exists, render it
+  if (customLayout && customLayout.sections.length > 0) {
+    const [stats, services] = await Promise.all([
+      getStats(),
+      getServices(user.roles),
+    ]);
+
+    return (
+      <div className="space-y-8">
+        {/* Welcome Banner */}
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 p-8 text-white shadow-2xl shadow-purple-500/20">
+          <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[size:40px_40px]" />
+          <div className="relative">
+            <h1 className="text-4xl font-bold tracking-tight">
+              Welcome back, {user.name?.split(" ")[0]}! 
+            </h1>
+            <p className="mt-3 text-lg text-white/80 max-w-2xl">
+              Custom layout active - configured by admin
+            </p>
+          </div>
+        </div>
+
+        {/* Custom Layout */}
+        {renderPageConfig(customLayout)}
+      </div>
+    );
+  }
   
   const [stats, services, adminAlerts, analyticsData] = await Promise.all([
     getStats(),
