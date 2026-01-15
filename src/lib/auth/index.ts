@@ -40,6 +40,7 @@ providers.push(
     credentials: {
       email: { label: "Email", type: "email", placeholder: "your@email.com" },
       password: { label: "Password", type: "password" },
+      totpCode: { label: "2FA Code", type: "text", placeholder: "123456" },
     },
     async authorize(credentials) {
       const email = credentials?.email as string;
