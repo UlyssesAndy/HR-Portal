@@ -1,3 +1,3 @@
-BUILD_TIMESTAMP=2026-01-15T16:55:30+07:00
-BUILD_COMMIT=force-rebuild-auth-fixes
-BUILD_REASON=Break Docker cache to deploy latest auth changes including 2FA fix and JWT optimization
+BUILD_TIMESTAMP=2026-01-15T17:10:00+07:00
+BUILD_COMMIT=fix-jwt-use-jose-jws-not-jwe
+BUILD_REASON=Use jose SignJWT for simple JWT (JWS) instead of NextAuth JWE encryption - reduces token from 70KB to 500 bytes
