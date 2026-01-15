@@ -22,7 +22,7 @@ declare module "next-auth" {
   }
 }
 
-declare module "@auth/core/jwt" {
+declare module "next-auth/jwt" {
   interface JWT {
     id: string;
     roles: AppRole[];
@@ -176,6 +176,18 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
+  jwt: {
+    // Use JWT signing instead of encryption to reduce token size
+    // JWE (encryption) creates tokens 3-4x larger than JWS (signing)
+    encode: async ({ token, secret }) => {
+      const { encode: jwtEncode } = await import("next-auth/jwt");
+      return jwtEncode({ token, secret, salt: "authjs.session-token" });
+    },
+    decode: async ({ token, secret }) => {
+      const { decode: jwtDecode } = await import("next-auth/jwt");
+      return jwtDecode({ token, secret, salt: "authjs.session-token" });
+    },
+  },
   cookies: {
     sessionToken: {
       name: `authjs.session-token`,
@@ -215,7 +227,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       
       if (user) {
         // Only store ID and roles on initial login
-        token.id = user.id;
+        token.id = user.id!;
         token.roles = user.roles || ["EMPLOYEE"];
       }
       
