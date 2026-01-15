@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ComponentLibrary, ComponentDefinition, COMPONENT_LIBRARY } from "./component-library";
+import { PropsEditor } from "./props-editor";
 
 interface Section {
   id: string;
@@ -64,6 +65,7 @@ export function GridBuilder({ page }: GridBuilderProps) {
   const [saveStatus, setSaveStatus] = useState<"idle" | "success" | "error">("idle");
   const [showComponentLibrary, setShowComponentLibrary] = useState(false);
   const [selectedSection, setSelectedSection] = useState<string | null>(null);
+  const [editingBlock, setEditingBlock] = useState<{ sectionId: string; blockId: string } | null>(null);
 
   // DnD sensors
   const sensors = useSensors(
@@ -151,6 +153,22 @@ export function GridBuilder({ page }: GridBuilderProps) {
       sections: prev.sections.map(s =>
         s.id === sectionId
           ? { ...s, blocks: s.blocks.filter(b => b.id !== blockId) }
+          : s
+      ),
+    }));
+  };
+
+  const handleUpdateBlockProps = (sectionId: string, blockId: string, props: Record<string, any>) => {
+    setConfig(prev => ({
+      ...prev,
+      sections: prev.sections.map(s =>
+        s.id === sectionId
+          ? {
+              ...s,
+              blocks: s.blocks.map(b =>
+                b.id === blockId ? { ...b, props } : b
+              ),
+            }
           : s
       ),
     }));
@@ -288,8 +306,13 @@ export function GridBuilder({ page }: GridBuilderProps) {
                     onAddBlock={() => {
                       setSelectedSection(section.id);
                       setShowComponentLibrary(true);
+                      setEditingBlock(null);
                     }}
                     onRemoveBlock={handleRemoveBlock}
+                    onEditBlock={(blockId) => {
+                      setEditingBlock({ sectionId: section.id, blockId });
+                      setShowComponentLibrary(false);
+                    }}
                   />
                 ))}
               </div>
@@ -298,17 +321,38 @@ export function GridBuilder({ page }: GridBuilderProps) {
         )}
       </div>
 
-      {/* Sidebar - Component Library */}
+      {/* Sidebar - Component Library / Props Editor */}
       <div className="lg:col-span-3">
         <Card className="sticky top-6">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Package className="h-5 w-5 text-indigo-600" />
-              Components
+              {editingBlock ? "Edit Props" : "Components"}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {showComponentLibrary && selectedSection ? (
+            {editingBlock ? (
+              // Props Editor
+              (() => {
+                const section = config.sections.find(s => s.id === editingBlock.sectionId);
+                const block = section?.blocks.find(b => b.id === editingBlock.blockId);
+                const componentDef = block ? COMPONENT_LIBRARY.find(c => c.id === block.component) : null;
+
+                if (!componentDef || !block) {
+                  return <p className="text-sm text-slate-500">Component not found</p>;
+                }
+
+                return (
+                  <PropsEditor
+                    component={componentDef}
+                    currentProps={block.props}
+                    onSave={(props) => handleUpdateBlockProps(editingBlock.sectionId, editingBlock.blockId, props)}
+                    onClose={() => setEditingBlock(null)}
+                  />
+                );
+              })()
+            ) : showComponentLibrary && selectedSection ? (
+              // Component Library
               <div>
                 <p className="text-sm text-slate-600 mb-4">
                   Select a component to add to the section:
@@ -325,10 +369,11 @@ export function GridBuilder({ page }: GridBuilderProps) {
                 </button>
               </div>
             ) : (
+              // Empty state
               <div className="text-center py-8">
                 <Package className="h-12 w-12 text-slate-300 mx-auto mb-3" />
                 <p className="text-sm text-slate-500">
-                  Click "Add Component" in a section to start
+                  Click "Add Component" in a section or click a block to edit its props
                 </p>
               </div>
             )}
@@ -347,6 +392,7 @@ function SortableSection({
   onUpdate,
   onAddBlock,
   onRemoveBlock,
+  onEditBlock,
 }: {
   section: Section;
   index: number;
@@ -354,6 +400,7 @@ function SortableSection({
   onUpdate: (id: string, updates: Partial<Section>) => void;
   onAddBlock: () => void;
   onRemoveBlock: (sectionId: string, blockId: string) => void;
+  onEditBlock: (blockId: string) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: section.id });
@@ -436,7 +483,8 @@ function SortableSection({
               return (
                 <div
                   key={block.id}
-                  className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 flex items-center justify-between group"
+                  onClick={() => onEditBlock(block.id)}
+                  className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 flex items-center justify-between group cursor-pointer hover:bg-indigo-100 transition-colors"
                 >
                   <div className="flex items-center gap-2">
                     {componentDef?.icon}
@@ -445,7 +493,10 @@ function SortableSection({
                     </span>
                   </div>
                   <button
-                    onClick={() => onRemoveBlock(section.id, block.id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRemoveBlock(section.id, block.id);
+                    }}
                     className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 rounded transition-all"
                   >
                     <Trash2 className="h-3 w-3 text-red-600" />
