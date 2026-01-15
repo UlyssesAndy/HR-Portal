@@ -28,6 +28,7 @@ import {
   Command,
   Plug,
   Palette,
+  Layout,
 } from "lucide-react";
 import { useState } from "react";
 import type { CurrentUser } from "@/types";
@@ -54,6 +55,7 @@ const adminNavigation = [
   { name: "Services", href: "/admin/services", icon: FileText, roles: ["HR", "ADMIN"] },
   { name: "Integrations", href: "/admin/integrations", icon: Plug, roles: ["ADMIN"] },
   { name: "Theme Editor", href: "/admin/theme", icon: Palette, roles: ["ADMIN"] },
+  { name: "Page Builder", href: "/admin/page-builder/dashboard", icon: Layout, roles: ["ADMIN"] },
   { name: "Roles", href: "/admin/roles", icon: Shield, roles: ["ADMIN"] },
   { name: "Field Visibility", href: "/admin/field-visibility", icon: Settings, roles: ["ADMIN"] },
   { name: "Pending Access", href: "/admin/pending-access", icon: UserPlus, roles: ["HR", "ADMIN"] },
