@@ -30,10 +30,13 @@ import {
   GripVertical,
   Settings2,
   Package,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ComponentLibrary, ComponentDefinition, COMPONENT_LIBRARY } from "./component-library";
 import { PropsEditor } from "./props-editor";
+import { COMPONENT_REGISTRY } from "@/lib/page-renderer";
 
 interface Section {
   id: string;
@@ -66,6 +69,7 @@ export function GridBuilder({ page }: GridBuilderProps) {
   const [showComponentLibrary, setShowComponentLibrary] = useState(false);
   const [selectedSection, setSelectedSection] = useState<string | null>(null);
   const [editingBlock, setEditingBlock] = useState<{ sectionId: string; blockId: string } | null>(null);
+  const [previewMode, setPreviewMode] = useState(false);
 
   // DnD sensors
   const sensors = useSensors(
@@ -231,18 +235,42 @@ export function GridBuilder({ page }: GridBuilderProps) {
       <div className="lg:col-span-9 space-y-6">
         {/* Actions Bar */}
         <div className="flex items-center justify-between">
-          <button
-            onClick={handleAddSection}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
-          >
-            <Plus className="h-4 w-4" />
-            Add Section
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleAddSection}
+              disabled={previewMode}
+              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Plus className="h-4 w-4" />
+              Add Section
+            </button>
+
+            <button
+              onClick={() => setPreviewMode(!previewMode)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                previewMode
+                  ? "bg-slate-600 hover:bg-slate-700 text-white"
+                  : "bg-slate-200 hover:bg-slate-300 text-slate-700"
+              }`}
+            >
+              {previewMode ? (
+                <>
+                  <EyeOff className="h-4 w-4" />
+                  Exit Preview
+                </>
+              ) : (
+                <>
+                  <Eye className="h-4 w-4" />
+                  Preview Mode
+                </>
+              )}
+            </button>
+          </div>
 
           <button
             onClick={handleSave}
-            disabled={isSaving}
-            className="flex items-center gap-2 px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50"
+            disabled={isSaving || previewMode}
+            className="flex items-center gap-2 px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSaving ? (
               <>
@@ -301,6 +329,7 @@ export function GridBuilder({ page }: GridBuilderProps) {
                     key={section.id}
                     section={section}
                     index={index}
+                    previewMode={previewMode}
                     onRemove={handleRemoveSection}
                     onUpdate={handleUpdateSection}
                     onAddBlock={() => {
@@ -388,6 +417,7 @@ export function GridBuilder({ page }: GridBuilderProps) {
 function SortableSection({
   section,
   index,
+  previewMode,
   onRemove,
   onUpdate,
   onAddBlock,
@@ -396,6 +426,7 @@ function SortableSection({
 }: {
   section: Section;
   index: number;
+  previewMode: boolean;
   onRemove: (id: string) => void;
   onUpdate: (id: string, updates: Partial<Section>) => void;
   onAddBlock: () => void;
@@ -478,32 +509,42 @@ function SortableSection({
               gap: section.gap,
             }}
           >
-            {section.blocks.map((block) => {
-              const componentDef = COMPONENT_LIBRARY.find(c => c.id === block.component);
-              return (
-                <div
-                  key={block.id}
-                  onClick={() => onEditBlock(block.id)}
-                  className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 flex items-center justify-between group cursor-pointer hover:bg-indigo-100 transition-colors"
-                >
-                  <div className="flex items-center gap-2">
-                    {componentDef?.icon}
-                    <span className="text-sm font-medium text-indigo-700">
-                      {componentDef?.name || block.component}
-                    </span>
-                  </div>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onRemoveBlock(section.id, block.id);
-                    }}
-                    className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 rounded transition-all"
+            {previewMode ? (
+              // Preview Mode - Real Components
+              section.blocks.map((block) => {
+                const Component = COMPONENT_REGISTRY[block.component];
+                if (!Component) return null;
+                return <Component key={block.id} {...block.props} />;
+              })
+            ) : (
+              // Edit Mode - Block Placeholders
+              section.blocks.map((block) => {
+                const componentDef = COMPONENT_LIBRARY.find(c => c.id === block.component);
+                return (
+                  <div
+                    key={block.id}
+                    onClick={() => onEditBlock(block.id)}
+                    className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 flex items-center justify-between group cursor-pointer hover:bg-indigo-100 transition-colors"
                   >
-                    <Trash2 className="h-3 w-3 text-red-600" />
-                  </button>
-                </div>
-              );
-            })}
+                    <div className="flex items-center gap-2">
+                      {componentDef?.icon}
+                      <span className="text-sm font-medium text-indigo-700">
+                        {componentDef?.name || block.component}
+                      </span>
+                    </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onRemoveBlock(section.id, block.id);
+                      }}
+                      className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 rounded transition-all"
+                    >
+                      <Trash2 className="h-3 w-3 text-red-600" />
+                    </button>
+                  </div>
+                );
+              })
+            )}
           </div>
 
           {/* Add Component Button */}
