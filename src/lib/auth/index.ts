@@ -1,6 +1,5 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
-import { PrismaAdapter } from "@auth/prisma-adapter";
 import { db } from "@/lib/db";
 import bcrypt from "bcryptjs";
 
@@ -169,7 +168,8 @@ providers.push(
 );
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
-  adapter: PrismaAdapter(db) as any,
+  // NOTE: No adapter needed for JWT strategy
+  // PrismaAdapter can load sensitive data into tokens
   providers,
   trustHost: true,
   session: {
@@ -210,13 +210,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
 
     async jwt({ token, user }) {
-      // Store minimal data in token
+      // CRITICAL: Only store minimal user data in JWT
+      // Never store credentials, secrets, or sensitive data
+      
       if (user) {
+        // Only store ID and roles on initial login
         token.id = user.id;
         token.roles = user.roles || ["EMPLOYEE"];
       }
       
-      // Ensure we have id field
+      // Ensure we have id field for existing tokens
       if (!token.id && token.sub) {
         token.id = token.sub as string;
       }
@@ -226,7 +229,34 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.roles = ["EMPLOYEE"];
       }
       
-      return token;
+      // CRITICAL: Strip any credentials or sensitive data that might have been added
+      // This prevents totpSecret, backupCodes, passwordHash from ending up in the token
+      const cleanToken = {
+        sub: token.sub,
+        id: token.id,
+        email: token.email,
+        name: token.name,
+        picture: token.picture,
+        roles: token.roles,
+        iat: token.iat,
+        exp: token.exp,
+        jti: token.jti,
+      };
+      
+      // Debug: Log token size
+      if (process.env.NODE_ENV === "production") {
+        const tokenSize = JSON.stringify(cleanToken).length;
+        if (tokenSize > 1000) {
+          console.warn(`[Auth] Large JWT token detected: ${tokenSize} bytes`, {
+            email: token.email,
+            hasExtraFields: Object.keys(token).filter(k => ![
+              'sub', 'id', 'email', 'name', 'picture', 'roles', 'iat', 'exp', 'jti'
+            ].includes(k)),
+          });
+        }
+      }
+      
+      return cleanToken as any;
     },
 
     async session({ session, token }) {
