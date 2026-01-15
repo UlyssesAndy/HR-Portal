@@ -32,11 +32,15 @@ import {
   Package,
   Eye,
   EyeOff,
+  Copy,
+  Undo,
+  Redo,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ComponentLibrary, ComponentDefinition, COMPONENT_LIBRARY } from "./component-library";
 import { PropsEditor } from "./props-editor";
 import { COMPONENT_REGISTRY } from "@/lib/page-renderer";
+import { ConfigManager } from "./config-manager";
 
 interface Section {
   id: string;
@@ -70,6 +74,8 @@ export function GridBuilder({ page }: GridBuilderProps) {
   const [selectedSection, setSelectedSection] = useState<string | null>(null);
   const [editingBlock, setEditingBlock] = useState<{ sectionId: string; blockId: string } | null>(null);
   const [previewMode, setPreviewMode] = useState(false);
+  const [history, setHistory] = useState<PageConfig[]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
 
   // DnD sensors
   const sensors = useSensors(
@@ -117,6 +123,29 @@ export function GridBuilder({ page }: GridBuilderProps) {
     setConfig(prev => ({
       ...prev,
       sections: prev.sections.filter(s => s.id !== sectionId),
+    }));
+  };
+
+  const handleDuplicateSection = (sectionId: string) => {
+    const section = config.sections.find(s => s.id === sectionId);
+    if (!section) return;
+
+    const duplicated: Section = {
+      ...section,
+      id: `section-${Date.now()}`,
+      blocks: section.blocks.map(b => ({
+        ...b,
+        id: `block-${Date.now()}-${Math.random()}`,
+      })),
+    };
+
+    const index = config.sections.findIndex(s => s.id === sectionId);
+    const newSections = [...config.sections];
+    newSections.splice(index + 1, 0, duplicated);
+
+    setConfig(prev => ({
+      ...prev,
+      sections: newSections,
     }));
   };
 
@@ -265,6 +294,33 @@ export function GridBuilder({ page }: GridBuilderProps) {
                 </>
               )}
             </button>
+
+            <div className="flex items-center gap-1 ml-2">
+              <button
+                onClick={() => {
+                  if (history.length > 0) {
+                    const newHistory = history.slice(0, -1);
+                    setConfig(history[history.length - 1]);
+                    setHistory(newHistory);
+                  }
+                }}
+                disabled={history.length === 0 || previewMode}
+                className="p-2 hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                title="Undo"
+              >
+                <Undo className="h-4 w-4 text-slate-600" />
+              </button>
+              <button
+                onClick={() => {
+                  // Redo functionality placeholder
+                }}
+                disabled={true}
+                className="p-2 hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                title="Redo (coming soon)"
+              >
+                <Redo className="h-4 w-4 text-slate-600" />
+              </button>
+            </div>
           </div>
 
           <button
@@ -342,6 +398,7 @@ export function GridBuilder({ page }: GridBuilderProps) {
                       setEditingBlock({ sectionId: section.id, blockId });
                       setShowComponentLibrary(false);
                     }}
+                    onDuplicate={handleDuplicateSection}
                   />
                 ))}
               </div>
@@ -408,6 +465,14 @@ export function GridBuilder({ page }: GridBuilderProps) {
             )}
           </CardContent>
         </Card>
+
+        {/* Config Manager */}
+        <div className="mt-4">
+          <ConfigManager
+            config={config}
+            onImport={(importedConfig) => setConfig(importedConfig)}
+          />
+        </div>
       </div>
     </div>
   );
@@ -423,6 +488,7 @@ function SortableSection({
   onAddBlock,
   onRemoveBlock,
   onEditBlock,
+  onDuplicate,
 }: {
   section: Section;
   index: number;
@@ -432,6 +498,7 @@ function SortableSection({
   onAddBlock: () => void;
   onRemoveBlock: (sectionId: string, blockId: string) => void;
   onEditBlock: (blockId: string) => void;
+  onDuplicate: (sectionId: string) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: section.id });
@@ -457,12 +524,21 @@ function SortableSection({
             <Grid3x3 className="h-5 w-5 text-indigo-600" />
             Section {index + 1}
           </CardTitle>
-          <button
-            onClick={() => onRemove(section.id)}
-            className="p-2 hover:bg-red-50 rounded-lg transition-colors"
-          >
-            <Trash2 className="h-4 w-4 text-red-600" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => onDuplicate(section.id)}
+              className="p-2 hover:bg-indigo-50 rounded-lg transition-colors"
+              title="Duplicate Section"
+            >
+              <Copy className="h-4 w-4 text-indigo-600" />
+            </button>
+            <button
+              onClick={() => onRemove(section.id)}
+              className="p-2 hover:bg-red-50 rounded-lg transition-colors"
+            >
+              <Trash2 className="h-4 w-4 text-red-600" />
+            </button>
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Section Settings */}
