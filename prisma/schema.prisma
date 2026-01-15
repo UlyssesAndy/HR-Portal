@@ -670,3 +670,42 @@ model NotificationRead {
   @@index([userId])
   @@map("notification_reads")
 }
+
+// Theme Configuration - stores CSS variables and design tokens
+model ThemeConfig {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @unique @db.VarChar(100) // "default", "dark", "custom"
+  isActive    Boolean  @default(false) @map("is_active")
+  
+  // CSS Variables as JSON
+  cssVars     Json     @default("{}") @map("css_vars") // { "--color-primary": "#4F46E5" }
+  
+  // Design tokens
+  colors      Json     @default("{}") // { "primary": "#4F46E5", "secondary": "#10B981" }
+  spacing     Json     @default("{}") // { "cardGap": "24px", "sectionPadding": "32px" }
+  typography  Json     @default("{}") // { "headingFont": "Inter", "bodyFont": "Inter" }
+  borderRadius Json    @default("{}") @map("border_radius") // { "card": "12px", "button": "8px" }
+  
+  updatedBy   String?  @map("updated_by") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@map("theme_configs")
+}
+
+// Page Configuration - stores Grid Builder layouts
+model PageConfig {
+  id        String   @id @default(uuid()) @db.Uuid
+  page      String   @unique @db.VarChar(100) // "dashboard", "directory", "profile"
+  
+  // Grid Builder configuration as JSON
+  config    Json     @default("{}") // Full page layout config
+  
+  // Metadata
+  version   Int      @default(1)
+  updatedBy String   @map("updated_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@map("page_configs")
+}
