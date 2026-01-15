@@ -10,6 +10,9 @@ WORKDIR /app
 # Install dependencies needed for native modules
 RUN apk add --no-cache libc6-compat
 
+# CACHE BUST V3 - 2026-01-15T17:25 - Force fresh npm install
+RUN echo "deps-cache-bust-v3-jose-jwt-fix"
+
 # Copy package files
 COPY package.json package-lock.json ./
 COPY prisma ./prisma/

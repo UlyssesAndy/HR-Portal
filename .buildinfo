@@ -1,3 +1,3 @@
-BUILD_TIMESTAMP=2026-01-15T17:20:00+07:00
-BUILD_COMMIT=force-jose-jwt-deploy-v2
-BUILD_REASON=URGENT - Force deployment of jose SignJWT fix for JWT token size reduction
+BUILD_TIMESTAMP=2026-01-15T17:25:00+07:00
+BUILD_COMMIT=force-full-rebuild-v3-deps-cache-bust
+BUILD_REASON=CRITICAL - Added deps stage cache bust to force complete rebuild with jose JWT fix
