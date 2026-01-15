@@ -24,6 +24,10 @@ RUN npx prisma generate
 FROM node:20-alpine AS builder
 WORKDIR /app
 
+# Break cache on every build
+ARG CACHEBUST=1
+RUN echo "Build timestamp: $CACHEBUST"
+
 # Copy dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
