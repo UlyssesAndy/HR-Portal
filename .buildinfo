@@ -1,3 +1,3 @@
-BUILD_TIMESTAMP=2026-01-15T17:10:00+07:00
-BUILD_COMMIT=fix-jwt-use-jose-jws-not-jwe
-BUILD_REASON=Use jose SignJWT for simple JWT (JWS) instead of NextAuth JWE encryption - reduces token from 70KB to 500 bytes
+BUILD_TIMESTAMP=2026-01-15T17:20:00+07:00
+BUILD_COMMIT=force-jose-jwt-deploy-v2
+BUILD_REASON=URGENT - Force deployment of jose SignJWT fix for JWT token size reduction
