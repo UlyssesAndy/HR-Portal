@@ -216,17 +216,17 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.roles = user.roles || ["EMPLOYEE"];
       }
       
-      // Keep token minimal - only essential fields
-      return {
-        sub: token.sub,
-        id: token.id,
-        email: token.email,
-        name: token.name,
-        roles: token.roles || ["EMPLOYEE"],
-        iat: token.iat,
-        exp: token.exp,
-        jti: token.jti,
-      };
+      // Ensure we have id field
+      if (!token.id && token.sub) {
+        token.id = token.sub as string;
+      }
+      
+      // Ensure roles array exists
+      if (!token.roles) {
+        token.roles = ["EMPLOYEE"];
+      }
+      
+      return token;
     },
 
     async session({ session, token }) {

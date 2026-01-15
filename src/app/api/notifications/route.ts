@@ -29,7 +29,17 @@ function formatNotification(event: any, isRead: boolean) {
 export async function GET(request: NextRequest) {
   try {
     const session = await auth();
+    
+    // Detailed logging for debugging
+    console.log("[Notifications API] Session check:", {
+      hasSession: !!session,
+      hasUser: !!session?.user,
+      userId: session?.user?.id,
+      userEmail: session?.user?.email,
+    });
+    
     if (!session?.user) {
+      console.error("[Notifications API] No session or user found");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
