@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,6 +28,25 @@ function LoginForm() {
 
   const callbackUrl = searchParams.get("callbackUrl") || "/";
   const errorParam = searchParams.get("error");
+
+  // Clear stale cookies on mount
+  useEffect(() => {
+    // Force clear any stale auth cookies
+    const cookiesToClear = [
+      "authjs.session-token",
+      "__Secure-authjs.session-token",
+      "authjs.csrf-token",
+      "__Secure-authjs.csrf-token",
+      "__Host-authjs.csrf-token",
+      "authjs.callback-url",
+      "__Secure-authjs.callback-url",
+    ];
+    
+    cookiesToClear.forEach(name => {
+      document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
+      document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; Secure; SameSite=Lax`;
+    });
+  }, []);
 
   const getErrorMessage = (param: string) => {
     switch (param) {

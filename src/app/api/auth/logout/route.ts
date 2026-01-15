@@ -52,10 +52,30 @@ export async function POST(request: NextRequest) {
       }
     }
     
-    // Delete all auth cookies
-    cookieStore.delete("authjs.session-token");
-    cookieStore.delete("authjs.csrf-token");
-    cookieStore.delete("authjs.callback-url");
+    // Delete all auth cookies (including secure variants)
+    const cookiesToDelete = [
+      "authjs.session-token",
+      "authjs.csrf-token",
+      "authjs.callback-url",
+      "__Secure-authjs.session-token",
+      "__Secure-authjs.csrf-token",
+      "__Secure-authjs.callback-url",
+      "__Host-authjs.csrf-token",
+    ];
+    
+    cookiesToDelete.forEach(cookieName => {
+      try {
+        cookieStore.delete(cookieName);
+        // Also try deleting with different options
+        cookieStore.delete({
+          name: cookieName,
+          path: "/",
+          domain: undefined,
+        });
+      } catch (e) {
+        // Ignore errors
+      }
+    });
     
     // Redirect to login with cache-busting headers
     const loginUrl = process.env.NEXTAUTH_URL 
