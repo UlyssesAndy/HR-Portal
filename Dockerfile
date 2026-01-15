@@ -24,12 +24,17 @@ RUN npx prisma generate
 FROM node:20-alpine AS builder
 WORKDIR /app
 
-# Break cache on every build
-ARG CACHEBUST=1
-RUN echo "Build timestamp: $CACHEBUST"
+# FORCE CACHE BUST: 2026-01-15-16-55-00 UTC+7
+# This comment changes with each deploy to break Docker cache
+RUN echo "Building at: $(date)"
 
 # Copy dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules
+
+# Copy buildinfo first to break cache when it changes
+COPY .buildinfo ./
+
+# Copy all source code
 COPY . .
 
 # Generate Prisma client again (for build)
