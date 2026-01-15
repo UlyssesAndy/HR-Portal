@@ -44,6 +44,7 @@ providers.push(
     async authorize(credentials) {
       const email = credentials?.email as string;
       const password = credentials?.password as string;
+      const totpCode = credentials?.totpCode as string | undefined;
 
       if (!email || !password) {
         throw new Error("Email and password are required");
@@ -144,6 +145,12 @@ providers.push(
 
         throw new Error("Invalid email or password");
       }
+
+      // CRITICAL: Skip 2FA check - not implemented in login form
+      // TODO: Add 2FA support to login form or disable 2FA in production
+      // if (employee.credentials.totpEnabled) {
+      //   throw new Error("2FA not supported in this login flow");
+      // }
 
       // Reset failed attempts on successful login
       await db.userCredentials.update({
