@@ -120,11 +120,16 @@ export default async function DirectoryPage({
             department: employee.departmentId ? { id: employee.departmentId, name: employee.departmentName || "" } : null,
             position: employee.positionId ? { id: employee.positionId, title: employee.positionTitle || "" } : null,
             manager: employee.managerId ? { id: employee.managerId, fullName: employee.managerName || "", avatarUrl: employee.managerAvatarUrl } : null,
-            // Extended fields for expandable card (available fields)
+            // Extended fields for expandable card
             isManager: employee.isManager || false,
             location: employee.location,
             birthDate: employee.birthDate,
             startDate: employee.startDate,
+            mattermostUsername: employee.mattermostUsername,
+            telegramHandle: employee.telegramHandle,
+            emergencyContactName: employee.emergencyContactName,
+            emergencyContactPhone: employee.emergencyContactPhone,
+            emergencyContactEmail: employee.emergencyContactEmail,
           }))}
           departments={departments}
           legalEntities={legalEntities}
