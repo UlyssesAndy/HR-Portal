@@ -11,6 +11,7 @@ import {
   Mail, Loader2, AlertCircle, CheckCircle, MapPin, Scale
 } from "lucide-react";
 import Link from "next/link";
+import { ExpandableEmployeeCard } from "./expandable-employee-card";
 
 interface Employee {
   id: string;
@@ -21,6 +22,16 @@ interface Employee {
   department: { id: string; name: string } | null;
   position: { id: string; title: string } | null;
   manager: { id: string; fullName: string; avatarUrl: string | null } | null;
+  // Extended fields for expandable card
+  isManager?: boolean;
+  location?: string | null;
+  birthDate?: string | null;
+  startDate?: string | null;
+  mattermostUsername?: string | null;
+  telegramHandle?: string | null;
+  emergencyContactName?: string | null;
+  emergencyContactPhone?: string | null;
+  emergencyContactEmail?: string | null;
 }
 
 interface Department {
@@ -218,11 +229,11 @@ export function BulkActionsDirectory({
           <div key={employee.id} className="relative">
             {bulkMode && (
               <button
-                onClick={() => toggleSelect(employee.id)}
-                className={`absolute top-2 left-2 z-10 p-1 rounded-md transition-colors ${
+                onClick={(e) => { e.stopPropagation(); toggleSelect(employee.id); }}
+                className={`absolute top-2 left-2 z-20 p-1 rounded-md transition-colors ${
                   selectedIds.has(employee.id)
                     ? "bg-blue-600 text-white"
-                    : "bg-white/80 text-slate-400 hover:bg-slate-100"
+                    : "bg-white/90 text-slate-400 hover:bg-slate-100 shadow-sm"
                 }`}
               >
                 {selectedIds.has(employee.id) ? (
@@ -233,66 +244,9 @@ export function BulkActionsDirectory({
               </button>
             )}
             
-            <Link href={bulkMode ? "#" : `/profile/${employee.id}`} onClick={bulkMode ? (e) => { e.preventDefault(); toggleSelect(employee.id); } : undefined}>
-              <Card className={`group cursor-pointer transition-all duration-300 ${
-                bulkMode && selectedIds.has(employee.id) 
-                  ? "ring-2 ring-blue-500 shadow-lg shadow-blue-500/20" 
-                  : "hover:shadow-xl hover:shadow-blue-500/10 hover:-translate-y-1"
-              }`}>
-                <CardContent className="p-6">
-                  <div className="flex flex-col items-center text-center">
-                    <div className="relative mb-4">
-                      <UserAvatar
-                        name={employee.fullName}
-                        imageUrl={employee.avatarUrl}
-                        className="h-20 w-20 text-xl ring-4 ring-slate-100 group-hover:ring-blue-100 transition-all"
-                      />
-                      <div className="absolute -bottom-1 -right-1">
-                        <Badge variant={statusColors[employee.status] || "default"} className="text-xs px-2">
-                          {employee.status.replace("_", " ")}
-                        </Badge>
-                      </div>
-                    </div>
-
-                    <h3 className="font-semibold text-slate-900 group-hover:text-blue-600 transition-colors">
-                      {employee.fullName}
-                    </h3>
-
-                    {employee.position && (
-                      <div className="flex items-center gap-1.5 text-sm text-slate-500 mt-1">
-                        <Briefcase className="h-3.5 w-3.5" />
-                        <span>{employee.position.title}</span>
-                      </div>
-                    )}
-
-                    {employee.department && (
-                      <div className="flex items-center gap-1.5 text-sm text-slate-500 mt-1">
-                        <Building2 className="h-3.5 w-3.5" />
-                        <span>{employee.department.name}</span>
-                      </div>
-                    )}
-
-                    <div className="flex items-center gap-1.5 text-xs text-slate-400 mt-3">
-                      <Mail className="h-3 w-3" />
-                      <span className="truncate max-w-[180px]">{employee.email}</span>
-                    </div>
-
-                    {employee.manager && (
-                      <div className="flex items-center gap-2 mt-4 pt-4 border-t border-slate-100 w-full">
-                        <UserAvatar
-                          name={employee.manager.fullName}
-                          imageUrl={employee.manager.avatarUrl}
-                          className="h-6 w-6 text-xs"
-                        />
-                        <span className="text-xs text-slate-500">
-                          Reports to {employee.manager.fullName}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
+            <div className={bulkMode && selectedIds.has(employee.id) ? "ring-2 ring-blue-500 rounded-xl" : ""}>
+              <ExpandableEmployeeCard employee={employee} />
+            </div>
           </div>
         ))}
       </div>

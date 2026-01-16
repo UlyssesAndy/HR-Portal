@@ -27,6 +27,15 @@ interface FuzzySearchResult {
   managerName: string | null;
   managerAvatarUrl: string | null;
   similarity: number;
+  // Extended fields for expandable card
+  birthDate: string | null;
+  startDate: string | null;
+  mattermostUsername: string | null;
+  telegramHandle: string | null;
+  emergencyContactName: string | null;
+  emergencyContactPhone: string | null;
+  emergencyContactEmail: string | null;
+  isManager: boolean;
 }
 
 /**
@@ -109,7 +118,16 @@ export async function fuzzySearchEmployees(options: FuzzySearchOptions) {
         e.manager_id as "managerId",
         m.full_name as "managerName",
         m.avatar_url as "managerAvatarUrl",
-        1.0 as similarity
+        1.0 as similarity,
+        e.birth_date as "birthDate",
+        e.start_date as "startDate",
+        e.mattermost_username as "mattermostUsername",
+        e.telegram_handle as "telegramHandle",
+        e.emergency_contact_name as "emergencyContactName",
+        e.emergency_contact_phone as "emergencyContactPhone",
+        e.emergency_contact_email as "emergencyContactEmail",
+        (EXISTS(SELECT 1 FROM employees dr WHERE dr.manager_id = e.id) OR
+         EXISTS(SELECT 1 FROM role_assignments ra WHERE ra.employee_id = e.id AND ra.role = 'MANAGER')) as "isManager"
       FROM employees e
       LEFT JOIN departments d ON e.department_id = d.id
       LEFT JOIN positions p ON e.position_id = p.id
@@ -182,7 +200,16 @@ export async function fuzzySearchEmployees(options: FuzzySearchOptions) {
       e.manager_id as "managerId",
       m.full_name as "managerName",
       m.avatar_url as "managerAvatarUrl",
-      ${similarityCalc} as similarity
+      ${similarityCalc} as similarity,
+      e.birth_date as "birthDate",
+      e.start_date as "startDate",
+      e.mattermost_username as "mattermostUsername",
+      e.telegram_handle as "telegramHandle",
+      e.emergency_contact_name as "emergencyContactName",
+      e.emergency_contact_phone as "emergencyContactPhone",
+      e.emergency_contact_email as "emergencyContactEmail",
+      (EXISTS(SELECT 1 FROM employees dr WHERE dr.manager_id = e.id) OR
+       EXISTS(SELECT 1 FROM role_assignments ra WHERE ra.employee_id = e.id AND ra.role = 'MANAGER')) as "isManager"
     FROM employees e
     LEFT JOIN departments d ON e.department_id = d.id
     LEFT JOIN positions p ON e.position_id = p.id
