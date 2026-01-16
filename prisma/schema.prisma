@@ -192,13 +192,6 @@ model Employee {
   // Contact
   phone           String? @db.VarChar(50)
   messengerHandle String? @map("messenger_handle") @db.VarChar(100)
-  mattermostUsername String? @map("mattermost_username") @db.VarChar(100)
-  telegramHandle  String? @map("telegram_handle") @db.VarChar(100)
-
-  // Emergency Contact
-  emergencyContactName  String? @map("emergency_contact_name") @db.VarChar(200)
-  emergencyContactPhone String? @map("emergency_contact_phone") @db.VarChar(50)
-  emergencyContactEmail String? @map("emergency_contact_email") @db.VarChar(255)
 
   // Location
   location String? @db.VarChar(100)

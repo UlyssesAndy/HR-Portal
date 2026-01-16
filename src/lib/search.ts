@@ -27,15 +27,16 @@ interface FuzzySearchResult {
   managerName: string | null;
   managerAvatarUrl: string | null;
   similarity: number;
-  // Extended fields for expandable card
+  // Fields that exist in DB
   birthDate: string | null;
   startDate: string | null;
-  mattermostUsername: string | null;
-  telegramHandle: string | null;
-  emergencyContactName: string | null;
-  emergencyContactPhone: string | null;
-  emergencyContactEmail: string | null;
   isManager: boolean;
+  // Extended fields - will be null until DB migration
+  mattermostUsername?: string | null;
+  telegramHandle?: string | null;
+  emergencyContactName?: string | null;
+  emergencyContactPhone?: string | null;
+  emergencyContactEmail?: string | null;
 }
 
 /**
@@ -121,11 +122,6 @@ export async function fuzzySearchEmployees(options: FuzzySearchOptions) {
         1.0 as similarity,
         e.birth_date as "birthDate",
         e.start_date as "startDate",
-        e.mattermost_username as "mattermostUsername",
-        e.telegram_handle as "telegramHandle",
-        e.emergency_contact_name as "emergencyContactName",
-        e.emergency_contact_phone as "emergencyContactPhone",
-        e.emergency_contact_email as "emergencyContactEmail",
         (EXISTS(SELECT 1 FROM employees dr WHERE dr.manager_id = e.id) OR
          EXISTS(SELECT 1 FROM role_assignments ra WHERE ra.employee_id = e.id AND ra.role = 'MANAGER')) as "isManager"
       FROM employees e
@@ -203,11 +199,6 @@ export async function fuzzySearchEmployees(options: FuzzySearchOptions) {
       ${similarityCalc} as similarity,
       e.birth_date as "birthDate",
       e.start_date as "startDate",
-      e.mattermost_username as "mattermostUsername",
-      e.telegram_handle as "telegramHandle",
-      e.emergency_contact_name as "emergencyContactName",
-      e.emergency_contact_phone as "emergencyContactPhone",
-      e.emergency_contact_email as "emergencyContactEmail",
       (EXISTS(SELECT 1 FROM employees dr WHERE dr.manager_id = e.id) OR
        EXISTS(SELECT 1 FROM role_assignments ra WHERE ra.employee_id = e.id AND ra.role = 'MANAGER')) as "isManager"
     FROM employees e
