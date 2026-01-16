@@ -9,7 +9,7 @@ interface EmployeeNode {
   fullName: string;
   avatarUrl: string | null;
   position: { title: string } | null;
-  department: { name: string } | null;
+  department: { id: string; name: string } | null;
   location: string | null;
   managerId: string | null;
 }
@@ -32,19 +32,26 @@ function buildTree(
 }
 
 async function getOrgData() {
-  const employees = await db.employee.findMany({
-    where: { status: { not: "TERMINATED" } },
-    select: {
-      id: true,
-      fullName: true,
-      avatarUrl: true,
-      managerId: true,
-      location: true,
-      position: { select: { title: true } },
-      department: { select: { name: true } },
-    },
-    orderBy: { fullName: "asc" },
-  });
+  const [employees, departments] = await Promise.all([
+    db.employee.findMany({
+      where: { status: { not: "TERMINATED" } },
+      select: {
+        id: true,
+        fullName: true,
+        avatarUrl: true,
+        managerId: true,
+        location: true,
+        position: { select: { title: true } },
+        department: { select: { id: true, name: true } },
+      },
+      orderBy: { fullName: "asc" },
+    }),
+    db.department.findMany({
+      where: { isActive: true },
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
+    }),
+  ]);
 
   // Build the tree starting from employees without managers (top-level)
   const tree = buildTree(employees, null);
@@ -68,6 +75,7 @@ async function getOrgData() {
   return { 
     tree, 
     allEmployees: addDirectReports(employees),
+    departments,
     stats: {
       total: employees.length,
       topLevel: tree.length,
@@ -90,7 +98,7 @@ export default async function OrgChartPage() {
   }
 
   const canEdit = session.user.roles?.includes("HR") || session.user.roles?.includes("ADMIN");
-  const { tree, allEmployees, stats } = await getOrgData();
+  const { tree, allEmployees, departments, stats } = await getOrgData();
 
   return (
     <div className="space-y-4">
@@ -140,6 +148,7 @@ export default async function OrgChartPage() {
       <OrgChartPro 
         rootEmployees={tree} 
         allEmployees={allEmployees}
+        departments={departments}
         canEdit={canEdit}
       />
     </div>

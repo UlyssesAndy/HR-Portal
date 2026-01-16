@@ -9,6 +9,8 @@ import { ProfileSelfEdit } from "@/components/profile/profile-self-edit";
 import { EmployeeHistoryClient } from "@/components/profile/employee-history-client";
 import { QuickActions } from "@/components/profile/quick-actions";
 import { PhotoUpload } from "@/components/profile/photo-upload";
+import { ProfileCompleteness } from "@/components/profile/profile-completeness";
+import { TeamView } from "@/components/profile/team-view";
 import Link from "next/link";
 import { 
   Mail, Phone, MapPin, Calendar, Building2, Briefcase, 
@@ -44,6 +46,30 @@ async function getEmployee(id: string) {
   });
 
   return employee;
+}
+
+// Get peers (employees with the same manager, excluding current employee)
+async function getPeers(managerId: string | null, employeeId: string) {
+  if (!managerId) return [];
+  
+  return db.employee.findMany({
+    where: {
+      managerId,
+      id: { not: employeeId },
+      status: { not: "TERMINATED" },
+    },
+    select: {
+      id: true,
+      fullName: true,
+      avatarUrl: true,
+      status: true,
+      position: {
+        select: { title: true },
+      },
+    },
+    orderBy: { fullName: "asc" },
+    take: 20,
+  });
 }
 
 async function getEditData() {
@@ -213,6 +239,9 @@ export default async function ProfilePage({ params }: PageProps) {
   // Fetch edit data only if HR can edit
   const editData = isHR ? await getEditData() : null;
   const history = isHR ? await getEmployeeHistory(employee.id) : [];
+  
+  // Fetch peers for team view
+  const peers = await getPeers(employee.managerId, employee.id);
 
   const roles = employee.roleAssignments.map(r => r.role);
 
@@ -562,6 +591,50 @@ export default async function ProfilePage({ params }: PageProps) {
             </Card>
           )}
         </div>
+      </div>
+
+      {/* Team View and Profile Completeness */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Team Structure */}
+        <TeamView
+          manager={employee.manager ? {
+            id: employee.manager.id,
+            fullName: employee.manager.fullName,
+            avatarUrl: employee.manager.avatarUrl,
+            position: employee.manager.position,
+            status: "ACTIVE",
+          } : null}
+          peers={peers}
+          directReports={employee.directReports.map(r => ({
+            id: r.id,
+            fullName: r.fullName,
+            avatarUrl: r.avatarUrl,
+            position: r.position,
+            status: r.status,
+          }))}
+          currentEmployeeId={employee.id}
+        />
+
+        {/* Profile Completeness (show on own profile or for HR) */}
+        {(isOwnProfile || isHR) && (
+          <ProfileCompleteness
+            employee={{
+              fullName: employee.fullName,
+              email: employee.email,
+              phone: employee.phone,
+              avatarUrl: employee.avatarUrl,
+              department: employee.department,
+              position: employee.position,
+              manager: employee.manager,
+              startDate: employee.startDate,
+              birthDate: employee.birthDate,
+              location: employee.location,
+              timezone: employee.timezone,
+              mattermostUsername: employee.mattermostUsername,
+              telegramHandle: employee.telegramHandle,
+            }}
+          />
+        )}
       </div>
 
       {/* Change History (HR/Admin only) */}

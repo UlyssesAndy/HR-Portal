@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import html2canvas from "html2canvas";
 import { 
   ChevronDown, Users, Search, X, ZoomIn, ZoomOut, Move, GripVertical, Check,
-  Minus, Plus, Maximize2, Download, Loader2, LayoutGrid, LayoutList, Map
+  Minus, Plus, Maximize2, Download, Loader2, LayoutGrid, LayoutList, Map, Building2, Filter
 } from "lucide-react";
 import Link from "next/link";
 
@@ -16,15 +16,21 @@ interface Employee {
   fullName: string;
   avatarUrl: string | null;
   position: { title: string } | null;
-  department: { name: string } | null;
+  department: { id?: string; name: string } | null;
   location: string | null;
   managerId: string | null;
   directReports: Employee[];
 }
 
+interface Department {
+  id: string;
+  name: string;
+}
+
 interface OrgChartProps {
   rootEmployees: Employee[];
   allEmployees: Employee[];
+  departments?: Department[];
   canEdit: boolean;
 }
 
@@ -240,12 +246,13 @@ function OrgTree({
   );
 }
 
-export function OrgChartPro({ rootEmployees, allEmployees, canEdit }: OrgChartProps) {
+export function OrgChartPro({ rootEmployees, allEmployees, departments = [], canEdit }: OrgChartProps) {
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<HTMLDivElement>(null);
   
   // State
+  const [departmentFilter, setDepartmentFilter] = useState<string>("");
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(() => {
     const set = new Set<string>();
     rootEmployees.forEach(emp => {
@@ -265,6 +272,37 @@ export function OrgChartPro({ rootEmployees, allEmployees, canEdit }: OrgChartPr
   const [layout, setLayout] = useState<'vertical' | 'horizontal'>('vertical');
   const [showMinimap, setShowMinimap] = useState(false);
   const [viewportPosition, setViewportPosition] = useState({ x: 0, y: 0 });
+  const [showDeptFilter, setShowDeptFilter] = useState(false);
+
+  // Filter tree by department - only show employees in the selected department
+  // but keep the hierarchy path to them
+  const filterByDepartment = (employees: Employee[], deptId: string): Employee[] => {
+    if (!deptId) return employees;
+    
+    const filterRecursive = (emp: Employee): Employee | null => {
+      const filteredReports = emp.directReports
+        .map(r => filterRecursive(r))
+        .filter((r): r is Employee => r !== null);
+      
+      const matchesDept = emp.department?.id === deptId;
+      
+      // Include if matches department or has matching descendants
+      if (matchesDept || filteredReports.length > 0) {
+        return {
+          ...emp,
+          directReports: filteredReports,
+        };
+      }
+      
+      return null;
+    };
+    
+    return employees
+      .map(emp => filterRecursive(emp))
+      .filter((emp): emp is Employee => emp !== null);
+  };
+
+  const filteredRootEmployees = filterByDepartment(rootEmployees, departmentFilter);
 
   // Export to PNG
   const exportToPng = async () => {
@@ -497,6 +535,55 @@ export function OrgChartPro({ rootEmployees, allEmployees, canEdit }: OrgChartPr
 
         <div className="h-6 w-px bg-slate-200" />
 
+        {/* Department Filter */}
+        {departments.length > 0 && (
+          <div className="relative">
+            <button
+              onClick={() => setShowDeptFilter(!showDeptFilter)}
+              className={`flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                departmentFilter 
+                  ? 'bg-indigo-100 text-indigo-700 border border-indigo-200' 
+                  : 'text-slate-600 hover:bg-slate-100'
+              }`}
+            >
+              <Building2 className="h-3.5 w-3.5" />
+              <span>{departmentFilter ? departments.find(d => d.id === departmentFilter)?.name : 'All Departments'}</span>
+              <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showDeptFilter ? 'rotate-180' : ''}`} />
+            </button>
+            
+            {showDeptFilter && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowDeptFilter(false)} />
+                <div className="absolute z-50 top-full left-0 mt-1 w-56 bg-white rounded-lg border border-slate-200 shadow-xl max-h-64 overflow-auto">
+                  <button
+                    onClick={() => { setDepartmentFilter(''); setShowDeptFilter(false); }}
+                    className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-slate-50 transition-colors ${
+                      !departmentFilter ? 'bg-indigo-50 text-indigo-700' : 'text-slate-700'
+                    }`}
+                  >
+                    <Users className="h-4 w-4" />
+                    <span>All Departments</span>
+                    {!departmentFilter && <Check className="h-4 w-4 ml-auto" />}
+                  </button>
+                  {departments.map(dept => (
+                    <button
+                      key={dept.id}
+                      onClick={() => { setDepartmentFilter(dept.id); setShowDeptFilter(false); }}
+                      className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-slate-50 transition-colors ${
+                        departmentFilter === dept.id ? 'bg-indigo-50 text-indigo-700' : 'text-slate-700'
+                      }`}
+                    >
+                      <Building2 className="h-4 w-4" />
+                      <span className="truncate">{dept.name}</span>
+                      {departmentFilter === dept.id && <Check className="h-4 w-4 ml-auto flex-shrink-0" />}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
         {/* Expand/Collapse */}
         <button onClick={expandAll} className="px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
           Expand All
@@ -571,9 +658,17 @@ export function OrgChartPro({ rootEmployees, allEmployees, canEdit }: OrgChartPr
           style={{ transform: `scale(${zoom / 100})` }}
         >
           {/* Multiple root employees */}
-          {rootEmployees.length === 1 ? (
+          {filteredRootEmployees.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <div className="h-14 w-14 rounded-full bg-slate-100 flex items-center justify-center mb-3">
+                <Filter className="h-7 w-7 text-slate-400" />
+              </div>
+              <p className="text-slate-600 font-medium">No employees in this department</p>
+              <p className="text-sm text-slate-400 mt-1">Try selecting a different department</p>
+            </div>
+          ) : filteredRootEmployees.length === 1 ? (
             <OrgTree
-              employee={rootEmployees[0]}
+              employee={filteredRootEmployees[0]}
               expandedNodes={expandedNodes}
               onToggle={handleToggle}
               highlightedId={highlightedId}
@@ -587,7 +682,7 @@ export function OrgChartPro({ rootEmployees, allEmployees, canEdit }: OrgChartPr
             />
           ) : (
             <div className={`flex ${layout === 'horizontal' ? 'flex-col' : 'flex-row'} gap-8`}>
-              {rootEmployees.map(emp => (
+              {filteredRootEmployees.map(emp => (
                 <OrgTree
                   key={emp.id}
                   employee={emp}

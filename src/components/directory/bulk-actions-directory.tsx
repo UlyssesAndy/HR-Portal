@@ -8,7 +8,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { 
   CheckSquare, Square, X, Users, Building2, Briefcase, 
-  Mail, Loader2, AlertCircle, CheckCircle, MapPin, Scale
+  Mail, Loader2, AlertCircle, CheckCircle, MapPin, Scale,
+  Download, FileSpreadsheet
 } from "lucide-react";
 import Link from "next/link";
 import { ExpandableEmployeeCard } from "./expandable-employee-card";
@@ -79,6 +80,7 @@ export function BulkActionsDirectory({
   const [bulkField, setBulkField] = useState<string>("");
   const [bulkValue, setBulkValue] = useState<string>("");
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const [result, setResult] = useState<{ success: boolean; count?: number; error?: string } | null>(null);
 
   const toggleSelect = (id: string) => {
@@ -110,6 +112,48 @@ export function BulkActionsDirectory({
     setBulkValue("");
     setShowBulkModal(true);
     setResult(null);
+  };
+
+  // Export selected employees to CSV
+  const exportSelected = async () => {
+    if (selectedIds.size === 0) return;
+    
+    setIsExporting(true);
+    
+    try {
+      // Build URL with selected IDs
+      const params = new URLSearchParams();
+      params.set('ids', Array.from(selectedIds).join(','));
+      
+      const response = await fetch(`/api/export/employees?${params.toString()}`);
+      
+      if (!response.ok) {
+        throw new Error('Export failed');
+      }
+      
+      // Get the CSV content
+      const blob = await response.blob();
+      
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `employees-selected-${new Date().toISOString().slice(0,10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      setResult({ success: true, count: selectedIds.size });
+      
+      // Show success briefly then clear
+      setTimeout(() => setResult(null), 2000);
+    } catch (error) {
+      console.error('Export error:', error);
+      setResult({ success: false, error: 'Failed to export employees' });
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const performBulkUpdate = async () => {
@@ -184,6 +228,20 @@ export function BulkActionsDirectory({
               <div className="h-6 w-px bg-blue-200" />
 
               <div className="flex items-center gap-2">
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={exportSelected}
+                  disabled={selectedIds.size === 0 || isExporting}
+                  className="gap-1 border-blue-300 text-blue-700 hover:bg-blue-100"
+                >
+                  {isExporting ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Download className="h-4 w-4" />
+                  )}
+                  Export Selected
+                </Button>
                 <Button 
                   size="sm" 
                   onClick={() => openBulkModal("departmentId")}

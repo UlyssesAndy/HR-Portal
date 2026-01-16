@@ -4,9 +4,12 @@ import { redirect } from "next/navigation";
 import { fuzzySearchEmployees, getUniqueLocations, getManagers } from "@/lib/search";
 import { DirectorySearch } from "@/components/directory/directory-search";
 import { DirectoryFilters } from "@/components/directory/directory-filters";
+import { QuickFilters } from "@/components/directory/quick-filters";
+import { AdvancedFiltersToggle } from "@/components/directory/advanced-filters-toggle";
+import { SavedViewsSelector } from "@/components/directory/saved-views-selector";
 import { ExportButton } from "@/components/directory/export-button";
 import { BulkActionsDirectory } from "@/components/directory/bulk-actions-directory";
-import { Users, UserCheck, UserX, Building2, ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { Users, UserCheck, Building2, ChevronLeft, ChevronRight, Search } from "lucide-react";
 
 interface SearchParams {
   q?: string;
@@ -54,13 +57,30 @@ async function getLegalEntities() {
 }
 
 async function getStats() {
-  const [total, active, onLeave, departments] = await Promise.all([
+  const [total, active, onLeave, maternity, pending, departments] = await Promise.all([
     db.employee.count({ where: { status: { not: "TERMINATED" } } }),
     db.employee.count({ where: { status: "ACTIVE" } }),
-    db.employee.count({ where: { status: { in: ["ON_LEAVE", "MATERNITY"] } } }),
+    db.employee.count({ where: { status: "ON_LEAVE" } }),
+    db.employee.count({ where: { status: "MATERNITY" } }),
+    db.employee.count({ where: { status: "PENDING" } }),
     db.department.count({ where: { isActive: true } }),
   ]);
-  return { total, active, onLeave, departments };
+  return { 
+    total, 
+    active, 
+    onLeave, 
+    maternity,
+    pending,
+    departments,
+    // For quick filters
+    counts: {
+      all: total,
+      active,
+      onLeave,
+      maternity,
+      pending,
+    }
+  };
 }
 
 export default async function DirectoryPage({
@@ -142,28 +162,40 @@ export default async function DirectoryPage({
         </div>
       </div>
 
-      {/* Search & Filters & Export */}
+      {/* Quick Filter Chips */}
+      <div className="bg-white dark:bg-slate-900/50 rounded-xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm">
+        <QuickFilters currentStatus={params.status} counts={stats.counts} />
+      </div>
+
+      {/* Search & Advanced Filters */}
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center bg-white dark:bg-slate-900/50 rounded-xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm">
         <div className="flex-1">
           <DirectorySearch defaultValue={params.q} />
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <DirectoryFilters 
-            departments={departments} 
-            managers={managers}
-            locations={locations}
-            legalEntities={legalEntities}
-            defaultDepartment={params.department}
-            defaultStatus={params.status}
-            defaultManager={params.manager}
-            defaultLocation={params.location}
-            defaultLegalEntity={params.legalEntity}
-          />
+          <SavedViewsSelector currentUserId={session.user.id} />
           {canBulkEdit && (
             <ExportButton searchParams={params} />
           )}
         </div>
       </div>
+
+      {/* Advanced Filters Panel (collapsible) */}
+      <AdvancedFiltersToggle 
+        hasActiveFilters={!!(params.department || params.manager || params.location || params.legalEntity)}
+      >
+        <DirectoryFilters 
+          departments={departments} 
+          managers={managers}
+          locations={locations}
+          legalEntities={legalEntities}
+          defaultDepartment={params.department}
+          defaultStatus={params.status}
+          defaultManager={params.manager}
+          defaultLocation={params.location}
+          defaultLegalEntity={params.legalEntity}
+        />
+      </AdvancedFiltersToggle>
 
       {/* Results info */}
       {(params.q || params.department || params.status || params.manager || params.location || params.legalEntity) && (

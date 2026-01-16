@@ -38,7 +38,7 @@ export function DirectorySearch({ defaultValue = "" }: DirectorySearchProps) {
         placeholder="Search by name, email, or position..."
         value={value}
         onChange={(e) => handleSearch(e.target.value)}
-        className="w-full h-12 pl-12 pr-4 rounded-xl border-2 border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/10 transition-all"
+        className="w-full h-12 pl-12 pr-4 rounded-xl border-2 border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-indigo-500 dark:focus:border-indigo-400 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 dark:focus:ring-indigo-400/20 transition-all"
       />
       {isPending && (
         <div className="absolute right-4 top-1/2 -translate-y-1/2">

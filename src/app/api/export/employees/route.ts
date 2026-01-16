@@ -25,35 +25,45 @@ export async function GET(request: NextRequest) {
     const managerId = searchParams.get("manager") || undefined;
     const location = searchParams.get("location") || undefined;
     const legalEntityId = searchParams.get("legalEntity") || undefined;
+    const idsParam = searchParams.get("ids") || undefined;
+
+    // Parse IDs if provided (for bulk export of selected employees)
+    const selectedIds = idsParam ? idsParam.split(",").filter(Boolean) : undefined;
 
     // Build where clause
-    const where: Prisma.EmployeeWhereInput = {
-      status: status ? (status as any) : { not: "TERMINATED" },
-    };
+    const where: Prisma.EmployeeWhereInput = {};
 
-    if (departmentId) {
-      where.departmentId = departmentId;
-    }
+    // If specific IDs are provided, filter by those
+    if (selectedIds && selectedIds.length > 0) {
+      where.id = { in: selectedIds };
+    } else {
+      // Apply other filters only when not exporting specific IDs
+      where.status = status ? (status as any) : { not: "TERMINATED" };
 
-    if (managerId) {
-      where.managerId = managerId;
-    }
+      if (departmentId) {
+        where.departmentId = departmentId;
+      }
 
-    if (location) {
-      where.location = location;
-    }
+      if (managerId) {
+        where.managerId = managerId;
+      }
 
-    if (legalEntityId) {
-      (where as any).legalEntityId = legalEntityId;
-    }
+      if (location) {
+        where.location = location;
+      }
 
-    if (query) {
-      where.OR = [
-        { fullName: { contains: query, mode: "insensitive" } },
-        { email: { contains: query, mode: "insensitive" } },
-        { position: { title: { contains: query, mode: "insensitive" } } },
-        { department: { name: { contains: query, mode: "insensitive" } } },
-      ];
+      if (legalEntityId) {
+        (where as any).legalEntityId = legalEntityId;
+      }
+
+      if (query) {
+        where.OR = [
+          { fullName: { contains: query, mode: "insensitive" } },
+          { email: { contains: query, mode: "insensitive" } },
+          { position: { title: { contains: query, mode: "insensitive" } } },
+          { department: { name: { contains: query, mode: "insensitive" } } },
+        ];
+      }
     }
 
     // Fetch employees with relations

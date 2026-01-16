@@ -247,6 +247,7 @@ model Employee {
   invitations          Invitation[]      @relation("InvitedBy")
   linkedInvitation     Invitation?       @relation("InvitationEmployee")
   credentials          UserCredentials?
+  savedViews           SavedView[]
 
   // Performance indexes for common queries
   @@index([status])
@@ -730,4 +731,41 @@ model PageConfig {
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   @@map("page_configs")
+}
+
+// Saved Views - user-defined filter presets for Directory
+model SavedView {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @db.VarChar(100)
+  description String?  @db.VarChar(255)
+  
+  // Ownership
+  userId      String   @map("user_id") @db.Uuid
+  isShared    Boolean  @default(false) @map("is_shared") // Shared views visible to all
+  isDefault   Boolean  @default(false) @map("is_default") // User's default view
+  
+  // Filter parameters stored as JSON
+  // { status: "ACTIVE", department: "uuid", location: "Moscow", ... }
+  filters     Json     @default("{}")
+  
+  // Display preferences
+  sortBy      String?  @map("sort_by") @db.VarChar(50)
+  sortOrder   String?  @map("sort_order") @db.VarChar(10) // "asc" | "desc"
+  
+  // Styling
+  icon        String?  @db.VarChar(50) // lucide icon name
+  color       String?  @db.VarChar(20) // hex or tailwind color
+  
+  // Metadata
+  usageCount  Int      @default(0) @map("usage_count")
+  lastUsedAt  DateTime? @map("last_used_at") @db.Timestamptz
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  
+  // Relations
+  user        Employee @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isShared])
+  @@map("saved_views")
 }
