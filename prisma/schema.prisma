@@ -145,6 +145,8 @@ model Department {
   employees Employee[]
   positions Position[]
 
+  @@index([isActive])
+  @@index([parentId])
   @@map("departments")
 }
 
@@ -161,6 +163,8 @@ model Position {
   employees  Employee[]
 
   @@unique([title, departmentId])
+  @@index([isActive])
+  @@index([departmentId])
   @@map("positions")
 }
 
@@ -244,6 +248,16 @@ model Employee {
   linkedInvitation     Invitation?       @relation("InvitationEmployee")
   credentials          UserCredentials?
 
+  // Performance indexes for common queries
+  @@index([status])
+  @@index([departmentId])
+  @@index([positionId])
+  @@index([managerId])
+  @@index([legalEntityId])
+  @@index([status, departmentId])
+  @@index([fullName])
+  @@index([createdAt(sort: Desc)])
+  @@index([location])
   @@map("employees")
 }
 
