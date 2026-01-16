@@ -1,8 +1,7 @@
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { redirect } from "next/navigation";
-import { Card, CardContent } from "@/components/ui/card";
-import { Building2, Users } from "lucide-react";
+import { Building2, Users, GitBranch, CheckCircle } from "lucide-react";
 import { DepartmentList } from "@/components/admin/department-list";
 
 async function getDepartments() {
@@ -27,64 +26,53 @@ export default async function DepartmentsAdminPage() {
   }
 
   const departments = await getDepartments();
+  const activeDepartments = departments.filter(d => d.isActive);
+  const totalEmployees = departments.reduce((acc, d) => acc + d._count.employees, 0);
+  const totalPositions = departments.reduce((acc, d) => acc + d._count.positions, 0);
 
   return (
     <div className="space-y-8">
-      {/* Header - Premium style */}
-      <div>
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent dark:from-indigo-400 dark:to-purple-400">
-          Departments
-        </h1>
-        <p className="text-slate-500 dark:text-slate-400 mt-1">
-          Manage organizational structure
-        </p>
-      </div>
-
-      {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/30">
-                <Building2 className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <p className="text-sm text-slate-500 dark:text-slate-400">Total Departments</p>
-                <p className="text-2xl font-bold text-slate-900 dark:text-white">{departments.length}</p>
-              </div>
+      {/* Premium Header */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 p-6 text-white shadow-xl shadow-indigo-500/20">
+        {/* Decorative elements */}
+        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-32 translate-x-32" />
+        <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-24 -translate-x-24" />
+        
+        <div className="relative">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="h-10 w-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+              <Building2 className="h-5 w-5" />
             </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/30">
-                <Building2 className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <p className="text-sm text-slate-500 dark:text-slate-400">Active</p>
-                <p className="text-2xl font-bold text-slate-900 dark:text-white">
-                  {departments.filter(d => d.isActive).length}
-                </p>
-              </div>
+            <h1 className="text-2xl font-bold">Departments</h1>
+          </div>
+          <p className="text-white/80 mb-6 max-w-lg">
+            Manage organizational structure and department hierarchy
+          </p>
+          
+          {/* Stats badges */}
+          <div className="flex flex-wrap gap-3">
+            <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-xl px-4 py-2">
+              <Building2 className="h-4 w-4" />
+              <span className="font-semibold">{departments.length}</span>
+              <span className="text-white/80 text-sm">Total</span>
             </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-pink-500 to-rose-600 flex items-center justify-center shadow-lg shadow-pink-500/30">
-                <Users className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <p className="text-sm text-slate-500 dark:text-slate-400">Total Employees</p>
-                <p className="text-2xl font-bold text-slate-900 dark:text-white">
-                  {departments.reduce((acc, d) => acc + d._count.employees, 0)}
-                </p>
-              </div>
+            <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-xl px-4 py-2">
+              <CheckCircle className="h-4 w-4" />
+              <span className="font-semibold">{activeDepartments.length}</span>
+              <span className="text-white/80 text-sm">Active</span>
             </div>
-          </CardContent>
-        </Card>
+            <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-xl px-4 py-2">
+              <Users className="h-4 w-4" />
+              <span className="font-semibold">{totalEmployees}</span>
+              <span className="text-white/80 text-sm">Employees</span>
+            </div>
+            <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-xl px-4 py-2">
+              <GitBranch className="h-4 w-4" />
+              <span className="font-semibold">{totalPositions}</span>
+              <span className="text-white/80 text-sm">Positions</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Department List with CRUD */}

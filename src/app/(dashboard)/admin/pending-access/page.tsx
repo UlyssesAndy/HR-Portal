@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { redirect } from "next/navigation";
 import { PendingAccessList } from "@/components/admin/pending-access-list";
+import { UserPlus, Clock, CheckCircle, XCircle } from "lucide-react";
 
 async function getPendingAccessData() {
   const requests = await db.pendingAccess.findMany({
@@ -35,14 +36,46 @@ export default async function PendingAccessPage() {
 
   return (
     <div className="space-y-8">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent dark:from-indigo-400 dark:to-purple-400">
-          Pending Access Requests
-        </h1>
-        <p className="text-slate-500 mt-1">
-          Review and approve external user access requests
-        </p>
+      {/* Premium Header */}
+      <div className={`relative overflow-hidden rounded-2xl p-6 text-white shadow-xl ${
+        stats.pending > 0 
+          ? "bg-gradient-to-br from-amber-500 via-orange-500 to-red-500 shadow-orange-500/20"
+          : "bg-gradient-to-br from-teal-500 via-emerald-500 to-green-500 shadow-emerald-500/20"
+      }`}>
+        {/* Decorative elements */}
+        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-32 translate-x-32" />
+        <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-24 -translate-x-24" />
+        
+        <div className="relative">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="h-10 w-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+              <UserPlus className="h-5 w-5" />
+            </div>
+            <h1 className="text-2xl font-bold">Pending Access Requests</h1>
+          </div>
+          <p className="text-white/80 mb-6 max-w-lg">
+            Review and approve external user access requests
+          </p>
+          
+          {/* Stats badges */}
+          <div className="flex flex-wrap gap-3">
+            <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-xl px-4 py-2">
+              <Clock className="h-4 w-4" />
+              <span className="font-semibold">{stats.pending}</span>
+              <span className="text-white/80 text-sm">Pending</span>
+            </div>
+            <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-xl px-4 py-2">
+              <CheckCircle className="h-4 w-4" />
+              <span className="font-semibold">{stats.approved}</span>
+              <span className="text-white/80 text-sm">Approved</span>
+            </div>
+            <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-xl px-4 py-2">
+              <XCircle className="h-4 w-4" />
+              <span className="font-semibold">{stats.rejected}</span>
+              <span className="text-white/80 text-sm">Rejected</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       <PendingAccessList requests={requests} stats={stats} />
