@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { redirect } from "next/navigation";
-import { Link2 } from "lucide-react";
+import { Link2, Grid3X3, ExternalLink, Sparkles } from "lucide-react";
 import { ServicesContent } from "@/components/services/services-content";
 
 async function getServices(userRoles: string[]) {
@@ -70,28 +70,41 @@ export default async function ServicesPage() {
 
   return (
     <div className="space-y-8">
-      {/* Header - Premium style */}
-      <div>
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent dark:from-indigo-400 dark:to-purple-400">
-          Services Hub
-        </h1>
-        <p className="text-slate-500 dark:text-slate-400 mt-1">
-          Quick access to {totalServices} company services and tools
-        </p>
-      </div>
-
-      {/* Featured Banner */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 p-8 text-white">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0zNiAxOGMtOS45NDEgMC0xOCA4LjA1OS0xOCAxOHM4LjA1OSAxOCAxOCAxOGM5Ljk0MSAwIDE4LTguMDU5IDE4LTE4cy04LjA1OS0xOC0xOC0xOHptMCAzMmMtNy43MzIgMC0xNC02LjI2OC0xNC0xNHM2LjI2OC0xNCAxNC0xNCAxNCA2LjI2OCAxNCAxNC02LjI2OCAxNC0xNCAxNHoiIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iLjA1Ii8+PC9nPjwvc3ZnPg==')] opacity-30" />
-        <div className="relative flex items-center gap-4">
-          <div className="h-14 w-14 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-sm">
-            <Link2 className="h-7 w-7" />
+      {/* Header - Premium style with gradient */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-pink-600 via-purple-600 to-indigo-600 p-8 text-white shadow-xl shadow-purple-500/20">
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[size:40px_40px]" />
+        <div className="absolute -top-24 -right-24 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
+        <div className="absolute -bottom-24 -left-24 h-48 w-48 rounded-full bg-cyan-400/10 blur-3xl" />
+        
+        <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+          <div className="flex items-center gap-4">
+            <div className="h-14 w-14 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-sm border border-white/10">
+              <Link2 className="h-7 w-7" />
+            </div>
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Services Hub</h1>
+              <p className="text-white/70 mt-1">
+                All your company tools in one place
+              </p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-xl font-bold">All Your Tools in One Place</h2>
-            <p className="text-white/80 text-sm">
-              Access company services based on your role and permissions
-            </p>
+          
+          {/* Quick Stats */}
+          <div className="flex gap-3">
+            <div className="rounded-xl bg-white/10 backdrop-blur-sm px-4 py-2 border border-white/10">
+              <div className="flex items-center gap-2">
+                <Grid3X3 className="h-4 w-4 text-white/70" />
+                <span className="text-lg font-bold">{totalServices}</span>
+              </div>
+              <p className="text-xs text-white/60">Services</p>
+            </div>
+            <div className="rounded-xl bg-white/10 backdrop-blur-sm px-4 py-2 border border-white/10">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-amber-300" />
+                <span className="text-lg font-bold">{categories.length}</span>
+              </div>
+              <p className="text-xs text-white/60">Categories</p>
+            </div>
           </div>
         </div>
       </div>
@@ -104,12 +117,14 @@ export default async function ServicesPage() {
 
       {/* Empty State */}
       {totalServices === 0 && (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="h-16 w-16 rounded-full bg-slate-100 flex items-center justify-center mb-4">
-            <Link2 className="h-8 w-8 text-slate-400" />
+        <div className="flex flex-col items-center justify-center py-20 text-center bg-white dark:bg-slate-900/50 rounded-2xl border border-slate-200 dark:border-slate-800">
+          <div className="h-20 w-20 rounded-full bg-gradient-to-br from-pink-100 to-purple-100 dark:from-pink-900/30 dark:to-purple-900/30 flex items-center justify-center mb-4">
+            <Link2 className="h-10 w-10 text-purple-500 dark:text-purple-400" />
           </div>
-          <h3 className="text-lg font-semibold text-slate-900">No services available</h3>
-          <p className="text-slate-500 mt-1">Contact your administrator to add services</p>
+          <h3 className="text-xl font-semibold text-slate-900 dark:text-white">No services available</h3>
+          <p className="text-slate-500 dark:text-slate-400 mt-2 max-w-md">
+            Services will appear here once configured by your administrator
+          </p>
         </div>
       )}
     </div>

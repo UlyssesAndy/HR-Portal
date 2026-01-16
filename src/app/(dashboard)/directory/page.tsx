@@ -6,7 +6,7 @@ import { DirectorySearch } from "@/components/directory/directory-search";
 import { DirectoryFilters } from "@/components/directory/directory-filters";
 import { ExportButton } from "@/components/directory/export-button";
 import { BulkActionsDirectory } from "@/components/directory/bulk-actions-directory";
-import { Users } from "lucide-react";
+import { Users, UserCheck, UserX, Building2, ChevronLeft, ChevronRight, Search } from "lucide-react";
 
 interface SearchParams {
   q?: string;
@@ -53,6 +53,16 @@ async function getLegalEntities() {
   });
 }
 
+async function getStats() {
+  const [total, active, onLeave, departments] = await Promise.all([
+    db.employee.count({ where: { status: { not: "TERMINATED" } } }),
+    db.employee.count({ where: { status: "ACTIVE" } }),
+    db.employee.count({ where: { status: { in: ["ON_LEAVE", "MATERNITY"] } } }),
+    db.department.count({ where: { isActive: true } }),
+  ]);
+  return { total, active, onLeave, departments };
+}
+
 export default async function DirectoryPage({
   searchParams,
 }: {
@@ -64,49 +74,107 @@ export default async function DirectoryPage({
   const canBulkEdit = session.user.roles?.includes("HR") || session.user.roles?.includes("ADMIN");
 
   const params = await searchParams;
-  const [{ employees, pagination }, departments, managers, locations, legalEntities] = await Promise.all([
+  const [{ employees, pagination }, departments, managers, locations, legalEntities, stats] = await Promise.all([
     getEmployees(params),
     getDepartments(),
     getManagers(),
     getUniqueLocations(),
     getLegalEntities(),
+    getStats(),
   ]);
 
+  // Calculate pagination range
+  const getPageRange = () => {
+    const current = pagination.page;
+    const total = pagination.totalPages;
+    const delta = 2;
+    const range: (number | string)[] = [];
+    
+    for (let i = 1; i <= total; i++) {
+      if (i === 1 || i === total || (i >= current - delta && i <= current + delta)) {
+        range.push(i);
+      } else if (range[range.length - 1] !== '...') {
+        range.push('...');
+      }
+    }
+    return range;
+  };
+
   return (
-    <div className="space-y-8">
-      {/* Header - Premium style */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent dark:from-indigo-400 dark:to-purple-400">
-            Employee Directory
-          </h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1">
-            {pagination.total} employees found
-            {params.q && <span className="text-indigo-600 dark:text-indigo-400 font-medium"> for "{params.q}"</span>}
-          </p>
+    <div className="space-y-6">
+      {/* Header with Stats - Premium style */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 p-6 text-white shadow-xl shadow-purple-500/20">
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[size:40px_40px]" />
+        <div className="absolute -top-24 -right-24 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
+        
+        <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Employee Directory</h1>
+            <p className="text-white/70 mt-1">
+              Browse and manage your organization's workforce
+            </p>
+          </div>
+          
+          {/* Quick Stats */}
+          <div className="flex gap-3">
+            <div className="rounded-xl bg-white/10 backdrop-blur-sm px-4 py-2 border border-white/10">
+              <div className="flex items-center gap-2">
+                <Users className="h-4 w-4 text-white/70" />
+                <span className="text-lg font-bold">{stats.total}</span>
+              </div>
+              <p className="text-xs text-white/60">Total</p>
+            </div>
+            <div className="rounded-xl bg-emerald-500/20 backdrop-blur-sm px-4 py-2 border border-emerald-400/20">
+              <div className="flex items-center gap-2">
+                <UserCheck className="h-4 w-4 text-emerald-300" />
+                <span className="text-lg font-bold">{stats.active}</span>
+              </div>
+              <p className="text-xs text-emerald-200/60">Active</p>
+            </div>
+            <div className="rounded-xl bg-white/10 backdrop-blur-sm px-4 py-2 border border-white/10">
+              <div className="flex items-center gap-2">
+                <Building2 className="h-4 w-4 text-white/70" />
+                <span className="text-lg font-bold">{stats.departments}</span>
+              </div>
+              <p className="text-xs text-white/60">Depts</p>
+            </div>
+          </div>
         </div>
-        {canBulkEdit && (
-          <ExportButton searchParams={params} />
-        )}
       </div>
 
-      {/* Search & Filters */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center">
+      {/* Search & Filters & Export */}
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center bg-white dark:bg-slate-900/50 rounded-xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm">
         <div className="flex-1">
           <DirectorySearch defaultValue={params.q} />
         </div>
-        <DirectoryFilters 
-          departments={departments} 
-          managers={managers}
-          locations={locations}
-          legalEntities={legalEntities}
-          defaultDepartment={params.department}
-          defaultStatus={params.status}
-          defaultManager={params.manager}
-          defaultLocation={params.location}
-          defaultLegalEntity={params.legalEntity}
-        />
+        <div className="flex flex-wrap items-center gap-3">
+          <DirectoryFilters 
+            departments={departments} 
+            managers={managers}
+            locations={locations}
+            legalEntities={legalEntities}
+            defaultDepartment={params.department}
+            defaultStatus={params.status}
+            defaultManager={params.manager}
+            defaultLocation={params.location}
+            defaultLegalEntity={params.legalEntity}
+          />
+          {canBulkEdit && (
+            <ExportButton searchParams={params} />
+          )}
+        </div>
       </div>
+
+      {/* Results info */}
+      {(params.q || params.department || params.status || params.manager || params.location || params.legalEntity) && (
+        <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+          <Search className="h-4 w-4" />
+          <span>
+            Found <strong className="text-slate-900 dark:text-white">{pagination.total}</strong> employees
+            {params.q && <span> matching "<strong className="text-indigo-600 dark:text-indigo-400">{params.q}</strong>"</span>}
+          </span>
+        </div>
+      )}
 
       {/* Employee Grid with Bulk Actions */}
       {employees.length > 0 ? (
@@ -136,31 +204,62 @@ export default async function DirectoryPage({
           canBulkEdit={canBulkEdit}
         />
       ) : (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="h-16 w-16 rounded-full bg-slate-100 flex items-center justify-center mb-4">
-            <Users className="h-8 w-8 text-slate-400" />
+        <div className="flex flex-col items-center justify-center py-20 text-center bg-white dark:bg-slate-900/50 rounded-2xl border border-slate-200 dark:border-slate-800">
+          <div className="h-20 w-20 rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900/30 dark:to-purple-900/30 flex items-center justify-center mb-4">
+            <Users className="h-10 w-10 text-indigo-500 dark:text-indigo-400" />
           </div>
-          <h3 className="text-lg font-semibold text-slate-900">No employees found</h3>
-          <p className="text-slate-500 mt-1">Try adjusting your search or filters</p>
+          <h3 className="text-xl font-semibold text-slate-900 dark:text-white">No employees found</h3>
+          <p className="text-slate-500 dark:text-slate-400 mt-2 max-w-md">
+            Try adjusting your search query or filters to find what you're looking for
+          </p>
         </div>
       )}
 
-      {/* Pagination */}
+      {/* Enhanced Pagination */}
       {pagination.totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2">
-          {Array.from({ length: Math.min(pagination.totalPages, 10) }, (_, i) => i + 1).map((pageNum) => (
-            <a
-              key={pageNum}
-              href={`/directory?page=${pageNum}${params.q ? `&q=${params.q}` : ""}${params.department ? `&department=${params.department}` : ""}${params.status ? `&status=${params.status}` : ""}${params.manager ? `&manager=${params.manager}` : ""}${params.location ? `&location=${params.location}` : ""}${params.legalEntity ? `&legalEntity=${params.legalEntity}` : ""}`}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                pageNum === pagination.page
-                  ? "bg-blue-600 text-white shadow-lg shadow-blue-500/30"
-                  : "bg-white text-slate-700 hover:bg-slate-50 border border-slate-200"
-              }`}
-            >
-              {pageNum}
-            </a>
+        <div className="flex items-center justify-center gap-1">
+          {/* Previous button */}
+          <a
+            href={pagination.page > 1 ? `/directory?page=${pagination.page - 1}${params.q ? `&q=${params.q}` : ""}${params.department ? `&department=${params.department}` : ""}${params.status ? `&status=${params.status}` : ""}${params.manager ? `&manager=${params.manager}` : ""}${params.location ? `&location=${params.location}` : ""}${params.legalEntity ? `&legalEntity=${params.legalEntity}` : ""}` : "#"}
+            className={`flex items-center justify-center w-10 h-10 rounded-lg text-sm font-medium transition-all ${
+              pagination.page === 1
+                ? "text-slate-300 dark:text-slate-600 cursor-not-allowed"
+                : "text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+            }`}
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </a>
+          
+          {/* Page numbers */}
+          {getPageRange().map((pageNum, idx) => (
+            pageNum === '...' ? (
+              <span key={`ellipsis-${idx}`} className="px-2 text-slate-400">...</span>
+            ) : (
+              <a
+                key={pageNum}
+                href={`/directory?page=${pageNum}${params.q ? `&q=${params.q}` : ""}${params.department ? `&department=${params.department}` : ""}${params.status ? `&status=${params.status}` : ""}${params.manager ? `&manager=${params.manager}` : ""}${params.location ? `&location=${params.location}` : ""}${params.legalEntity ? `&legalEntity=${params.legalEntity}` : ""}`}
+                className={`flex items-center justify-center w-10 h-10 rounded-lg text-sm font-medium transition-all ${
+                  pageNum === pagination.page
+                    ? "bg-gradient-to-br from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-500/30"
+                    : "text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700"
+                }`}
+              >
+                {pageNum}
+              </a>
+            )
           ))}
+          
+          {/* Next button */}
+          <a
+            href={pagination.page < pagination.totalPages ? `/directory?page=${pagination.page + 1}${params.q ? `&q=${params.q}` : ""}${params.department ? `&department=${params.department}` : ""}${params.status ? `&status=${params.status}` : ""}${params.manager ? `&manager=${params.manager}` : ""}${params.location ? `&location=${params.location}` : ""}${params.legalEntity ? `&legalEntity=${params.legalEntity}` : ""}` : "#"}
+            className={`flex items-center justify-center w-10 h-10 rounded-lg text-sm font-medium transition-all ${
+              pagination.page === pagination.totalPages
+                ? "text-slate-300 dark:text-slate-600 cursor-not-allowed"
+                : "text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+            }`}
+          >
+            <ChevronRight className="h-5 w-5" />
+          </a>
         </div>
       )}
     </div>

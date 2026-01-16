@@ -11,7 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Mail, Loader2, Lock, Wand2, KeyRound, ArrowLeft, CheckCircle2, Chrome } from "lucide-react";
+import { Mail, Loader2, Lock, Wand2, KeyRound, ArrowLeft, CheckCircle2, Chrome, Sparkles, Shield, Users } from "lucide-react";
 import { signIn } from "next-auth/react";
 import { cn } from "@/lib/utils";
 
@@ -122,6 +122,49 @@ function LoginForm() {
         <div className="absolute top-1/4 right-1/4 w-96 h-96 bg-gradient-radial from-pink-500/20 to-transparent rounded-full blur-3xl" />
         {/* Grid overlay */}
         <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:60px_60px]" />
+        {/* Floating particles */}
+        <div className="absolute top-20 left-20 w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDuration: '3s' }} />
+        <div className="absolute top-40 right-32 w-1.5 h-1.5 bg-cyan-400 rounded-full animate-bounce" style={{ animationDuration: '2.5s', animationDelay: '0.5s' }} />
+        <div className="absolute bottom-32 left-1/4 w-1 h-1 bg-pink-400 rounded-full animate-bounce" style={{ animationDuration: '4s', animationDelay: '1s' }} />
+        <div className="absolute bottom-20 right-20 w-2 h-2 bg-amber-400 rounded-full animate-bounce" style={{ animationDuration: '3.5s' }} />
+      </div>
+
+      {/* Left side - Feature showcase (hidden on mobile) */}
+      <div className="hidden lg:flex flex-col items-start justify-center w-96 mr-12 relative z-10">
+        <div className="space-y-8">
+          <div>
+            <h1 className="text-4xl font-bold text-white mb-3">
+              Welcome to <br />
+              <span className="bg-gradient-to-r from-purple-400 via-pink-400 to-cyan-400 bg-clip-text text-transparent">
+                HR Portal
+              </span>
+            </h1>
+            <p className="text-slate-400 text-lg">
+              Your all-in-one employee management solution
+            </p>
+          </div>
+          
+          <div className="space-y-4">
+            <div className="flex items-center gap-4 text-slate-300">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-500/20 border border-purple-500/30">
+                <Users className="h-5 w-5 text-purple-400" />
+              </div>
+              <span>Employee Directory & Profiles</span>
+            </div>
+            <div className="flex items-center gap-4 text-slate-300">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-500/20 border border-cyan-500/30">
+                <Shield className="h-5 w-5 text-cyan-400" />
+              </div>
+              <span>Secure Role-Based Access</span>
+            </div>
+            <div className="flex items-center gap-4 text-slate-300">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-pink-500/20 border border-pink-500/30">
+                <Sparkles className="h-5 w-5 text-pink-400" />
+              </div>
+              <span>Modern & Intuitive Interface</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       <Card className="w-full max-w-md relative z-10 border border-white/10 bg-slate-900/80 backdrop-blur-2xl shadow-2xl shadow-purple-500/10 rounded-3xl overflow-hidden">
@@ -271,11 +314,19 @@ function LoginForm() {
 
 
 
-          <div className="text-center text-xs text-slate-500 pt-4">
+          <div className="text-center text-xs text-slate-500 pt-4 space-y-2">
             <p>Corporate accounts or invited emails only</p>
+            <p className="text-slate-600">v1.0.0 • Powered by HR Portal</p>
           </div>
         </CardContent>
       </Card>
+
+      {/* Bottom branding */}
+      <div className="absolute bottom-6 left-0 right-0 text-center">
+        <p className="text-xs text-slate-600">
+          © {new Date().getFullYear()} HR Portal • All rights reserved
+        </p>
+      </div>
     </div>
   );
 }

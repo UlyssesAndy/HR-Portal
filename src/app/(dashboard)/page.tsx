@@ -11,9 +11,25 @@ import { RecentEmployeesWidget } from "@/components/dashboard/recent-employees-w
 import { getPageConfig, renderPageConfig } from "@/lib/page-renderer";
 import { 
   Users, Building2, ExternalLink, Clock, CheckCircle2, 
-  AlertTriangle, Link2
+  AlertTriangle, Link2, Briefcase, TrendingUp, Network,
+  Calendar, Sparkles, ArrowRight
 } from "lucide-react";
 import Link from "next/link";
+
+// Time-based greeting
+function getGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  return "Good evening";
+}
+
+// Day info
+function getDayInfo(): string {
+  const now = new Date();
+  const options: Intl.DateTimeFormatOptions = { weekday: 'long', month: 'long', day: 'numeric' };
+  return now.toLocaleDateString('en-US', options);
+}
 
 async function getStats() {
   const [employeeCount, departmentCount, activeCount, onLeaveCount, positionCount] = await Promise.all([
@@ -179,66 +195,99 @@ export default async function HomePage() {
         <div className="absolute -bottom-32 -left-32 h-64 w-64 rounded-full bg-cyan-400/20 blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
         
         <div className="relative">
+          <div className="flex items-center gap-2 mb-2">
+            <Sparkles className="h-5 w-5 text-yellow-300 animate-pulse" />
+            <span className="text-sm font-medium text-white/70">{getDayInfo()}</span>
+          </div>
           <h1 className="text-4xl font-bold tracking-tight">
-            Welcome back, {user.name?.split(" ")[0]}! 
+            {getGreeting()}, {user.name?.split(" ")[0]}!
           </h1>
           <p className="mt-3 text-lg text-white/80 max-w-2xl">
-            Access your company services, explore the employee directory, and stay connected with your team.
+            Your team is growing strong. Access services, explore the directory, and stay connected.
           </p>
         </div>
 
-        {/* Quick stats */}
-        <div className="relative mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="group rounded-2xl bg-white/10 backdrop-blur-sm p-5 border border-white/10 hover:bg-white/20 transition-all duration-300">
-            <div className="flex items-center gap-4">
-              <div className="rounded-xl bg-gradient-to-br from-white/30 to-white/10 p-3 shadow-lg">
-                <Users className="h-6 w-6" />
-              </div>
-              <div>
+        {/* Quick stats - Enhanced grid */}
+        <div className="relative mt-8 grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="group rounded-2xl bg-white/10 backdrop-blur-sm p-5 border border-white/10 hover:bg-white/20 transition-all duration-300 hover:scale-[1.02]">
+            <div className="flex flex-col">
+              <div className="flex items-center gap-3">
+                <div className="rounded-xl bg-gradient-to-br from-white/30 to-white/10 p-2.5 shadow-lg">
+                  <Users className="h-5 w-5" />
+                </div>
                 <p className="text-3xl font-bold">{stats.employeeCount}</p>
-                <p className="text-sm text-white/70">Total Employees</p>
               </div>
+              <p className="text-sm text-white/70 mt-2">Total Employees</p>
             </div>
           </div>
-          <div className="group rounded-2xl bg-white/10 backdrop-blur-sm p-5 border border-white/10 hover:bg-white/20 transition-all duration-300">
-            <div className="flex items-center gap-4">
-              <div className="rounded-xl bg-gradient-to-br from-white/30 to-white/10 p-3 shadow-lg">
-                <Building2 className="h-6 w-6" />
-              </div>
-              <div>
-                <p className="text-3xl font-bold">{stats.departmentCount}</p>
-                <p className="text-sm text-white/70">Departments</p>
-              </div>
-            </div>
-          </div>
-          <div className="group rounded-2xl bg-white/10 backdrop-blur-sm p-5 border border-white/10 hover:bg-white/20 transition-all duration-300">
-            <div className="flex items-center gap-4">
-              <div className="rounded-xl bg-gradient-to-br from-white/30 to-white/10 p-3 shadow-lg">
-                <CheckCircle2 className="h-6 w-6" />
-              </div>
-              <div>
+          <div className="group rounded-2xl bg-white/10 backdrop-blur-sm p-5 border border-white/10 hover:bg-white/20 transition-all duration-300 hover:scale-[1.02]">
+            <div className="flex flex-col">
+              <div className="flex items-center gap-3">
+                <div className="rounded-xl bg-gradient-to-br from-emerald-400/30 to-emerald-600/10 p-2.5 shadow-lg">
+                  <CheckCircle2 className="h-5 w-5 text-emerald-300" />
+                </div>
                 <p className="text-3xl font-bold">{stats.activeCount}</p>
-                <p className="text-sm text-white/70">Active Now</p>
               </div>
+              <p className="text-sm text-white/70 mt-2">Active Now</p>
+            </div>
+          </div>
+          <div className="group rounded-2xl bg-white/10 backdrop-blur-sm p-5 border border-white/10 hover:bg-white/20 transition-all duration-300 hover:scale-[1.02]">
+            <div className="flex flex-col">
+              <div className="flex items-center gap-3">
+                <div className="rounded-xl bg-gradient-to-br from-white/30 to-white/10 p-2.5 shadow-lg">
+                  <Building2 className="h-5 w-5" />
+                </div>
+                <p className="text-3xl font-bold">{stats.departmentCount}</p>
+              </div>
+              <p className="text-sm text-white/70 mt-2">Departments</p>
+            </div>
+          </div>
+          <div className="group rounded-2xl bg-white/10 backdrop-blur-sm p-5 border border-white/10 hover:bg-white/20 transition-all duration-300 hover:scale-[1.02]">
+            <div className="flex flex-col">
+              <div className="flex items-center gap-3">
+                <div className="rounded-xl bg-gradient-to-br from-white/30 to-white/10 p-2.5 shadow-lg">
+                  <Briefcase className="h-5 w-5" />
+                </div>
+                <p className="text-3xl font-bold">{stats.positionCount}</p>
+              </div>
+              <p className="text-sm text-white/70 mt-2">Positions</p>
             </div>
           </div>
         </div>
       </div>
 
       {/* Quick actions - Premium cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         <Link href="/directory">
-          <Card className="group cursor-pointer bg-white dark:bg-slate-900/50 dark:border-slate-800 hover:shadow-xl hover:shadow-indigo-500/10 dark:hover:border-indigo-500/50 transition-all duration-300 rounded-2xl overflow-hidden">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 p-3 shadow-lg shadow-indigo-500/30 group-hover:shadow-indigo-500/50 transition-shadow">
-                  <Users className="h-6 w-6 text-white" />
+          <Card className="group cursor-pointer bg-white dark:bg-slate-900/50 dark:border-slate-800 hover:shadow-xl hover:shadow-indigo-500/10 dark:hover:border-indigo-500/50 transition-all duration-300 rounded-2xl overflow-hidden h-full">
+            <CardContent className="p-5">
+              <div className="flex flex-col items-start gap-3">
+                <div className="rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 p-3 shadow-lg shadow-indigo-500/30 group-hover:shadow-indigo-500/50 group-hover:scale-110 transition-all">
+                  <Users className="h-5 w-5 text-white" />
                 </div>
                 <div>
                   <h3 className="font-semibold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                    Employee Directory
+                    Directory
                   </h3>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">Find colleagues</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Find colleagues</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href="/org-chart">
+          <Card className="group cursor-pointer bg-white dark:bg-slate-900/50 dark:border-slate-800 hover:shadow-xl hover:shadow-violet-500/10 dark:hover:border-violet-500/50 transition-all duration-300 rounded-2xl overflow-hidden h-full">
+            <CardContent className="p-5">
+              <div className="flex flex-col items-start gap-3">
+                <div className="rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 p-3 shadow-lg shadow-violet-500/30 group-hover:shadow-violet-500/50 group-hover:scale-110 transition-all">
+                  <Network className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-slate-900 dark:text-white group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors">
+                    Org Chart
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Team structure</p>
                 </div>
               </div>
             </CardContent>
@@ -246,17 +295,17 @@ export default async function HomePage() {
         </Link>
 
         <Link href="/profile/me">
-          <Card className="group cursor-pointer bg-white dark:bg-slate-900/50 dark:border-slate-800 hover:shadow-xl hover:shadow-emerald-500/10 dark:hover:border-emerald-500/50 transition-all duration-300 rounded-2xl overflow-hidden">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 p-3 shadow-lg shadow-emerald-500/30 group-hover:shadow-emerald-500/50 transition-shadow">
-                  <Clock className="h-6 w-6 text-white" />
+          <Card className="group cursor-pointer bg-white dark:bg-slate-900/50 dark:border-slate-800 hover:shadow-xl hover:shadow-emerald-500/10 dark:hover:border-emerald-500/50 transition-all duration-300 rounded-2xl overflow-hidden h-full">
+            <CardContent className="p-5">
+              <div className="flex flex-col items-start gap-3">
+                <div className="rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 p-3 shadow-lg shadow-emerald-500/30 group-hover:shadow-emerald-500/50 group-hover:scale-110 transition-all">
+                  <Clock className="h-5 w-5 text-white" />
                 </div>
                 <div>
                   <h3 className="font-semibold text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
                     My Profile
                   </h3>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">View your info</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">View your info</p>
                 </div>
               </div>
             </CardContent>
@@ -264,36 +313,57 @@ export default async function HomePage() {
         </Link>
 
         <Link href="/services">
-          <Card className="group cursor-pointer bg-white dark:bg-slate-900/50 dark:border-slate-800 hover:shadow-xl hover:shadow-pink-500/10 dark:hover:border-pink-500/50 transition-all duration-300 rounded-2xl overflow-hidden">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="rounded-xl bg-gradient-to-br from-pink-500 to-rose-600 p-3 shadow-lg shadow-pink-500/30 group-hover:shadow-pink-500/50 transition-shadow">
-                  <Link2 className="h-6 w-6 text-white" />
+          <Card className="group cursor-pointer bg-white dark:bg-slate-900/50 dark:border-slate-800 hover:shadow-xl hover:shadow-pink-500/10 dark:hover:border-pink-500/50 transition-all duration-300 rounded-2xl overflow-hidden h-full">
+            <CardContent className="p-5">
+              <div className="flex flex-col items-start gap-3">
+                <div className="rounded-xl bg-gradient-to-br from-pink-500 to-rose-600 p-3 shadow-lg shadow-pink-500/30 group-hover:shadow-pink-500/50 group-hover:scale-110 transition-all">
+                  <Link2 className="h-5 w-5 text-white" />
                 </div>
                 <div>
                   <h3 className="font-semibold text-slate-900 dark:text-white group-hover:text-pink-600 dark:group-hover:text-pink-400 transition-colors">
-                    Services Hub
+                    Services
                   </h3>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">All company tools</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Company tools</p>
                 </div>
               </div>
             </CardContent>
           </Card>
         </Link>
 
-        {isHRorAdmin && (adminAlerts.pendingProblems > 0 || adminAlerts.unresolvedSyncErrors > 0) && (
+        {isHRorAdmin && (adminAlerts.pendingProblems > 0 || adminAlerts.unresolvedSyncErrors > 0) ? (
           <Link href="/admin/problems">
-            <Card className="group cursor-pointer bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-700/50 hover:shadow-xl hover:shadow-amber-500/10 dark:hover:border-amber-500/50 transition-all duration-300 rounded-2xl overflow-hidden">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-4">
-                  <div className="rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 p-3 shadow-lg shadow-amber-500/30 group-hover:shadow-amber-500/50 transition-shadow">
-                    <AlertTriangle className="h-6 w-6 text-white" />
+            <Card className="group cursor-pointer bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-700/50 hover:shadow-xl hover:shadow-amber-500/10 dark:hover:border-amber-500/50 transition-all duration-300 rounded-2xl overflow-hidden h-full">
+              <CardContent className="p-5">
+                <div className="flex flex-col items-start gap-3">
+                  <div className="relative rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 p-3 shadow-lg shadow-amber-500/30 group-hover:shadow-amber-500/50 group-hover:scale-110 transition-all">
+                    <AlertTriangle className="h-5 w-5 text-white" />
+                    <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+                      {adminAlerts.pendingProblems + adminAlerts.unresolvedSyncErrors}
+                    </span>
                   </div>
                   <div>
                     <h3 className="font-semibold text-slate-900 dark:text-white group-hover:text-amber-600 transition-colors">
-                      {adminAlerts.pendingProblems + adminAlerts.unresolvedSyncErrors} Issues
+                      Issues
                     </h3>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">Requires attention</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Needs attention</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+        ) : (
+          <Link href="/settings">
+            <Card className="group cursor-pointer bg-white dark:bg-slate-900/50 dark:border-slate-800 hover:shadow-xl hover:shadow-slate-500/10 dark:hover:border-slate-500/50 transition-all duration-300 rounded-2xl overflow-hidden h-full">
+              <CardContent className="p-5">
+                <div className="flex flex-col items-start gap-3">
+                  <div className="rounded-xl bg-gradient-to-br from-slate-500 to-slate-700 p-3 shadow-lg shadow-slate-500/30 group-hover:shadow-slate-500/50 group-hover:scale-110 transition-all">
+                    <Calendar className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-slate-900 dark:text-white group-hover:text-slate-600 dark:group-hover:text-slate-400 transition-colors">
+                      Settings
+                    </h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Preferences</p>
                   </div>
                 </div>
               </CardContent>
@@ -324,13 +394,22 @@ export default async function HomePage() {
         <AnalyticsSection data={analyticsData} />
       )}
 
-      {/* Services */}
+      {/* Services - Premium Grid */}
       {Object.keys(servicesByCategory).length > 0 ? (
         <div className="space-y-6">
-          <h2 className="text-xl font-bold text-slate-900 dark:text-white">Services</h2>
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white">Quick Access Services</h2>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Your favorite tools and resources</p>
+            </div>
+            <Link href="/services" className="group flex items-center gap-1 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors">
+              View all <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+            </Link>
+          </div>
           {Object.entries(servicesByCategory).map(([category, categoryServices]) => (
             <div key={category} className="space-y-4">
-              <h3 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                <span className="h-1 w-1 rounded-full bg-indigo-500"></span>
                 {category}
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -342,28 +421,30 @@ export default async function HomePage() {
                     rel="noopener noreferrer"
                     className="group"
                   >
-                    <Card className="h-full hover:border-blue-200 hover:shadow-lg transition-all">
-                      <CardContent className="p-6">
+                    <Card className="h-full bg-white dark:bg-slate-900/50 dark:border-slate-800 hover:border-indigo-200 dark:hover:border-indigo-700/50 hover:shadow-lg hover:shadow-indigo-500/5 transition-all duration-300 rounded-xl overflow-hidden">
+                      <CardContent className="p-5">
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex-1">
                             <div className="flex items-center gap-2">
-                              <h4 className="font-semibold text-slate-900 dark:text-white group-hover:text-blue-600 transition-colors">
+                              <h4 className="font-semibold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                                 {service.title}
                               </h4>
-                              <ExternalLink className="h-4 w-4 text-slate-400 group-hover:text-blue-500 transition-colors" />
+                              <ExternalLink className="h-3.5 w-3.5 text-slate-400 group-hover:text-indigo-500 transition-colors opacity-0 group-hover:opacity-100" />
                             </div>
                             {service.description && (
-                              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400 line-clamp-2">
+                              <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400 line-clamp-2">
                                 {service.description}
                               </p>
                             )}
                           </div>
                           {service.iconUrl && (
-                            <img
-                              src={service.iconUrl}
-                              alt=""
-                              className="h-10 w-10 rounded-lg"
-                            />
+                            <div className="flex-shrink-0 rounded-lg bg-slate-100 dark:bg-slate-800 p-2 group-hover:bg-indigo-100 dark:group-hover:bg-indigo-900/30 transition-colors">
+                              <img
+                                src={service.iconUrl}
+                                alt=""
+                                className="h-8 w-8 rounded"
+                              />
+                            </div>
                           )}
                         </div>
                       </CardContent>
@@ -375,11 +456,14 @@ export default async function HomePage() {
           ))}
         </div>
       ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle>Services</CardTitle>
-            <CardDescription>
-              No services configured yet. Contact your administrator to add service links.
+        <Card className="bg-gradient-to-br from-slate-50 to-slate-100/50 dark:from-slate-900/50 dark:to-slate-800/30 border-dashed">
+          <CardHeader className="text-center py-12">
+            <div className="mx-auto rounded-full bg-slate-200 dark:bg-slate-800 p-4 w-fit mb-4">
+              <Link2 className="h-8 w-8 text-slate-400" />
+            </div>
+            <CardTitle className="text-slate-700 dark:text-slate-300">No Services Yet</CardTitle>
+            <CardDescription className="max-w-sm mx-auto">
+              Service links will appear here once configured by your administrator.
             </CardDescription>
           </CardHeader>
         </Card>
