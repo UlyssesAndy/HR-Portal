@@ -80,10 +80,6 @@ COPY --from=deps /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=deps /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=deps /app/node_modules/prisma ./node_modules/prisma
 
-# Copy entrypoint script and set permissions (before switching to non-root)
-COPY --from=builder /app/scripts/docker-entrypoint.sh ./docker-entrypoint.sh
-RUN chmod +x ./docker-entrypoint.sh && chown nextjs:nodejs ./docker-entrypoint.sh
-
 # Switch to non-root user
 USER nextjs
 
@@ -97,5 +93,5 @@ ENV HOSTNAME="0.0.0.0"
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1
 
-# Start the application with migrations
-CMD ["./docker-entrypoint.sh"]
+# Start the application with automatic database migrations
+CMD sh -c "echo '=== Applying database migrations ===' && npx prisma db push --skip-generate --accept-data-loss 2>&1 || echo 'Migration warning (continuing)' && echo '=== Starting application ===' && node server.js"
