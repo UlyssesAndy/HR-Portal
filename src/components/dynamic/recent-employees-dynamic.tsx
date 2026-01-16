@@ -12,12 +12,11 @@ interface RecentEmployeesDynamicProps {
 async function getRecentEmployees(limit: number) {
   const employees = await db.employee.findMany({
     take: limit,
-    orderBy: { hireDate: "desc" },
+    orderBy: { createdAt: "desc" },
     where: { status: { not: "TERMINATED" } },
     select: {
       id: true,
-      firstName: true,
-      lastName: true,
+      fullName: true,
       avatarUrl: true,
       status: true,
       position: {
@@ -25,7 +24,7 @@ async function getRecentEmployees(limit: number) {
           title: true,
         },
       },
-      hireDate: true,
+      startDate: true,
     },
   });
 
@@ -51,19 +50,19 @@ export async function RecentEmployeesDynamic({ limit = 5 }: RecentEmployeesDynam
             employees.map((employee) => (
               <Link
                 key={employee.id}
-                href={`/directory/${employee.id}`}
-                className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-50 transition-colors"
+                href={`/profile/${employee.id}`}
+                className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
               >
                 <UserAvatar
-                  src={employee.avatarUrl}
-                  name={`${employee.firstName} ${employee.lastName}`}
+                  imageUrl={employee.avatarUrl}
+                  name={employee.fullName}
                   size="md"
                 />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-slate-900">
-                    {employee.firstName} {employee.lastName}
+                  <p className="text-sm font-medium text-slate-900 dark:text-white">
+                    {employee.fullName}
                   </p>
-                  <p className="text-xs text-slate-600 truncate">
+                  <p className="text-xs text-slate-600 dark:text-slate-400 truncate">
                     {employee.position?.title || "No position"}
                   </p>
                 </div>

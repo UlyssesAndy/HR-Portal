@@ -12,12 +12,12 @@ interface ActivityFeedDynamicProps {
 async function getActivityData(limit: number) {
   const activities = await db.auditEvent.findMany({
     take: limit,
-    orderBy: { timestamp: "desc" },
+    orderBy: { createdAt: "desc" },
     select: {
       id: true,
       action: true,
       actorEmail: true,
-      timestamp: true,
+      createdAt: true,
       resourceType: true,
     },
   });
@@ -45,8 +45,8 @@ export async function ActivityFeedDynamic({ limit = 10, showAvatar = true }: Act
               <div key={activity.id} className="flex items-start gap-3 pb-3 border-b last:border-0">
                 {showAvatar && (
                   <UserAvatar
-                    src={null}
-                    name={activity.actorEmail}
+                    imageUrl={null}
+                    name={activity.actorEmail || "Unknown"}
                     size="sm"
                   />
                 )}
@@ -58,7 +58,7 @@ export async function ActivityFeedDynamic({ limit = 10, showAvatar = true }: Act
                     {activity.action} - {activity.resourceType}
                   </p>
                   <p className="text-xs text-slate-400 mt-1">
-                    {formatDistanceToNow(new Date(activity.timestamp), { addSuffix: true })}
+                    {formatDistanceToNow(new Date(activity.createdAt), { addSuffix: true })}
                   </p>
                 </div>
               </div>

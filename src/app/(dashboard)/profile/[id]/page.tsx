@@ -13,7 +13,7 @@ import Link from "next/link";
 import { 
   Mail, Phone, MapPin, Calendar, Building2, Briefcase, 
   Users, Clock, Globe, MessageSquare, ChevronLeft,
-  UserCircle, BadgeCheck, Shield
+  UserCircle, BadgeCheck, Shield, AlertCircle
 } from "lucide-react";
 
 interface PageProps {
@@ -331,6 +331,14 @@ export default async function ProfilePage({ params }: PageProps) {
                 <InfoRow icon={Phone} label="Phone" value={employee.phone} />
               )}
               
+              {employee.mattermostUsername && (
+                <InfoRow icon={MessageSquare} label="Mattermost" value={`@${employee.mattermostUsername}`} />
+              )}
+              
+              {employee.telegramHandle && (
+                <InfoRow icon={MessageSquare} label="Telegram" value={`@${employee.telegramHandle}`} />
+              )}
+              
               {employee.messengerHandle && (
                 <InfoRow icon={MessageSquare} label="Messenger" value={employee.messengerHandle} />
               )}
@@ -511,6 +519,35 @@ export default async function ProfilePage({ params }: PageProps) {
                     day: "numeric"
                   })}
                 </p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Emergency Contact (if visible and has data) */}
+          {canSeeRestrictedFields && (employee.emergencyContactName || employee.emergencyContactPhone || employee.emergencyContactEmail) && (
+            <Card className="border-red-200 bg-red-50">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg text-red-700">
+                  <AlertCircle className="h-5 w-5" />
+                  Emergency Contact
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {employee.emergencyContactName && (
+                  <p className="text-sm text-red-800">
+                    <span className="font-medium">Name:</span> {employee.emergencyContactName}
+                  </p>
+                )}
+                {employee.emergencyContactPhone && (
+                  <p className="text-sm text-red-800">
+                    <span className="font-medium">Phone:</span> {employee.emergencyContactPhone}
+                  </p>
+                )}
+                {employee.emergencyContactEmail && (
+                  <p className="text-sm text-red-800">
+                    <span className="font-medium">Email:</span> {employee.emergencyContactEmail}
+                  </p>
+                )}
               </CardContent>
             </Card>
           )}

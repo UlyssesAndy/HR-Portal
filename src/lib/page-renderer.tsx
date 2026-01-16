@@ -60,7 +60,7 @@ export async function getPageConfig(page: string): Promise<PageConfig | null> {
 
     if (!pageConfig) return null;
 
-    return pageConfig.config as PageConfig;
+    return pageConfig.config as unknown as PageConfig;
   } catch (error) {
     console.error("Failed to load page config:", error);
     return null;

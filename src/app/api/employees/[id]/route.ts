@@ -45,7 +45,9 @@ export async function PATCH(
     const trackableFields = [
       "fullName", "email", "phone", "location", "timezone", "status",
       "departmentId", "positionId", "managerId", "startDate", "birthDate",
-      "employmentType", "legalEntityId", "statusNote", "statusStartDate", "statusEndDate"
+      "employmentType", "legalEntityId", "statusNote", "statusStartDate", "statusEndDate",
+      "mattermostUsername", "telegramHandle", "messengerHandle",
+      "emergencyContactName", "emergencyContactPhone", "emergencyContactEmail"
     ];
 
     for (const field of trackableFields) {
