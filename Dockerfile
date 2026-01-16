@@ -10,6 +10,9 @@ WORKDIR /app
 # Install dependencies needed for native modules
 RUN apk add --no-cache libc6-compat
 
+# CACHE BUST V3 - 2026-01-15T17:25 - Force fresh npm install
+RUN echo "deps-cache-bust-v3-jose-jwt-fix"
+
 # Copy package files
 COPY package.json package-lock.json ./
 COPY prisma ./prisma/
@@ -24,8 +27,17 @@ RUN npx prisma generate
 FROM node:20-alpine AS builder
 WORKDIR /app
 
+# FORCE CACHE BUST: 2026-01-15-16-55-00 UTC+7
+# This comment changes with each deploy to break Docker cache
+RUN echo "Building at: $(date)"
+
 # Copy dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules
+
+# Copy buildinfo first to break cache when it changes
+COPY .buildinfo ./
+
+# Copy all source code
 COPY . .
 
 # Generate Prisma client again (for build)

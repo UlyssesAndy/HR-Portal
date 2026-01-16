@@ -216,15 +216,30 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   jwt: {
-    // Use JWT signing instead of encryption to reduce token size
-    // JWE (encryption) creates tokens 3-4x larger than JWS (signing)
-    encode: async ({ token, secret }) => {
-      const { encode: jwtEncode } = await import("next-auth/jwt");
-      return jwtEncode({ token, secret, salt: "authjs.session-token" });
+    // CRITICAL: Use simple JWT signing WITHOUT encryption (JWS, not JWE)
+    // This reduces token size from ~70KB to ~500 bytes
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+    async encode({ token, secret }) {
+      const { SignJWT } = await import("jose");
+      const secretKey = new TextEncoder().encode(secret as string);
+      const jwt = await new SignJWT(token as any)
+        .setProtectedHeader({ alg: "HS256" })
+        .setIssuedAt()
+        .setExpirationTime("30d")
+        .sign(secretKey);
+      return jwt;
     },
-    decode: async ({ token, secret }) => {
-      const { decode: jwtDecode } = await import("next-auth/jwt");
-      return jwtDecode({ token, secret, salt: "authjs.session-token" });
+    async decode({ token, secret }) {
+      if (!token) return null;
+      try {
+        const { jwtVerify } = await import("jose");
+        const secretKey = new TextEncoder().encode(secret as string);
+        const { payload } = await jwtVerify(token, secretKey);
+        return payload as any;
+      } catch (error) {
+        console.error("JWT decode error:", error);
+        return null;
+      }
     },
   },
   cookies: {
@@ -282,28 +297,24 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       
       // CRITICAL: Strip any credentials or sensitive data that might have been added
       // This prevents totpSecret, backupCodes, passwordHash from ending up in the token
+      // Also remove picture/image as it can be a huge base64 string (71KB+)
       const cleanToken = {
         sub: token.sub,
         id: token.id,
         email: token.email,
         name: token.name,
-        picture: token.picture,
+        // picture: token.picture, // REMOVED - can be 71KB base64!
         roles: token.roles,
         iat: token.iat,
         exp: token.exp,
         jti: token.jti,
       };
       
-      // Debug: Log token size
+      // Debug: Log token size (only warn if actually large)
       if (process.env.NODE_ENV === "production") {
         const tokenSize = JSON.stringify(cleanToken).length;
         if (tokenSize > 1000) {
-          console.warn(`[Auth] Large JWT token detected: ${tokenSize} bytes`, {
-            email: token.email,
-            hasExtraFields: Object.keys(token).filter(k => ![
-              'sub', 'id', 'email', 'name', 'picture', 'roles', 'iat', 'exp', 'jti'
-            ].includes(k)),
-          });
+          console.warn(`[Auth] Large JWT token detected: ${tokenSize} bytes`);
         }
       }
       
