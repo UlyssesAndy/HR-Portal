@@ -317,11 +317,13 @@ export default async function ProfilePage({ params }: PageProps) {
         {/* Left Column - Contact & Manager */}
         <div className="space-y-6">
           {/* Contact Info */}
-          <Card>
+          <Card className="bg-white dark:bg-slate-900/50 border-slate-200 dark:border-slate-800">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
-                <UserCircle className="h-5 w-5 text-blue-500" />
-                Contact Information
+                <div className="h-8 w-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                  <UserCircle className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                </div>
+                <span className="text-slate-900 dark:text-white">Contact Information</span>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -355,17 +357,19 @@ export default async function ProfilePage({ params }: PageProps) {
 
           {/* Manager */}
           {employee.manager && (
-            <Card>
+            <Card className="bg-white dark:bg-slate-900/50 border-slate-200 dark:border-slate-800">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">
-                  <BadgeCheck className="h-5 w-5 text-green-500" />
-                  Reports To
+                  <div className="h-8 w-8 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                    <BadgeCheck className="h-4 w-4 text-green-600 dark:text-green-400" />
+                  </div>
+                  <span className="text-slate-900 dark:text-white">Reports To</span>
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <Link 
                   href={`/profile/${employee.manager.id}`}
-                  className="flex items-center gap-4 p-3 rounded-xl bg-slate-50 hover:bg-blue-50 transition-colors group"
+                  className="flex items-center gap-4 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors group"
                 >
                   <UserAvatar
                     name={employee.manager.fullName}
@@ -373,7 +377,7 @@ export default async function ProfilePage({ params }: PageProps) {
                     className="h-12 w-12 ring-2 ring-white shadow"
                   />
                   <div>
-                    <p className="font-semibold text-slate-900 group-hover:text-blue-600 transition-colors">
+                    <p className="font-semibold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                       {employee.manager.fullName}
                     </p>
                     {employee.manager.position && (
@@ -390,11 +394,13 @@ export default async function ProfilePage({ params }: PageProps) {
 
         {/* Center Column - Work Info */}
         <div className="space-y-6">
-          <Card>
+          <Card className="bg-white dark:bg-slate-900/50 border-slate-200 dark:border-slate-800">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
-                <Briefcase className="h-5 w-5 text-indigo-500" />
-                Work Information
+                <div className="h-8 w-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
+                  <Briefcase className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                </div>
+                <span className="text-slate-900 dark:text-white">Work Information</span>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -465,12 +471,14 @@ export default async function ProfilePage({ params }: PageProps) {
         {/* Right Column - Direct Reports */}
         <div className="space-y-6">
           {employee.directReports.length > 0 && (
-            <Card>
+            <Card className="bg-white dark:bg-slate-900/50 border-slate-200 dark:border-slate-800">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">
-                  <Users className="h-5 w-5 text-purple-500" />
-                  Direct Reports
-                  <span className="ml-auto text-sm font-normal text-slate-500">
+                  <div className="h-8 w-8 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+                    <Users className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                  </div>
+                  <span className="text-slate-900 dark:text-white">Direct Reports</span>
+                  <span className="ml-auto px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/30 text-xs font-medium text-purple-700 dark:text-purple-300">
                     {employee.directReports.length}
                   </span>
                 </CardTitle>
@@ -480,7 +488,7 @@ export default async function ProfilePage({ params }: PageProps) {
                   <Link
                     key={report.id}
                     href={`/profile/${report.id}`}
-                    className="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50 transition-colors group"
+                    className="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group"
                   >
                     <UserAvatar
                       name={report.fullName}
@@ -488,7 +496,7 @@ export default async function ProfilePage({ params }: PageProps) {
                       className="h-10 w-10"
                     />
                     <div className="min-w-0 flex-1">
-                      <p className="font-medium text-slate-900 group-hover:text-blue-600 transition-colors truncate">
+                      <p className="font-medium text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors truncate">
                         {report.fullName}
                       </p>
                       {report.position && (
@@ -505,15 +513,17 @@ export default async function ProfilePage({ params }: PageProps) {
 
           {/* Birthday (if visible) */}
           {canSeeRestrictedFields && employee.birthDate && (
-            <Card>
+            <Card className="bg-white dark:bg-slate-900/50 border-slate-200 dark:border-slate-800">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">
-                  <Calendar className="h-5 w-5 text-pink-500" />
-                  Birthday
+                  <div className="h-8 w-8 rounded-lg bg-pink-100 dark:bg-pink-900/30 flex items-center justify-center">
+                    <Calendar className="h-4 w-4 text-pink-600 dark:text-pink-400" />
+                  </div>
+                  <span className="text-slate-900 dark:text-white">Birthday</span>
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-slate-700">
+                <p className="text-slate-700 dark:text-slate-300">
                   {new Date(employee.birthDate).toLocaleDateString("en-US", {
                     month: "long",
                     day: "numeric"
@@ -580,13 +590,13 @@ function InfoRow({
   value: string;
 }) {
   return (
-    <div className="flex items-start gap-3">
-      <div className="flex-shrink-0 h-9 w-9 rounded-lg bg-slate-100 flex items-center justify-center">
-        <Icon className="h-4 w-4 text-slate-500" />
+    <div className="flex items-start gap-3 group">
+      <div className="flex-shrink-0 h-9 w-9 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center group-hover:bg-indigo-100 dark:group-hover:bg-indigo-900/30 transition-colors">
+        <Icon className="h-4 w-4 text-slate-500 dark:text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors" />
       </div>
       <div>
-        <p className="text-xs text-slate-500">{label}</p>
-        <p className="text-sm font-medium text-slate-900">{value}</p>
+        <p className="text-xs text-slate-500 dark:text-slate-400">{label}</p>
+        <p className="text-sm font-medium text-slate-900 dark:text-white">{value}</p>
       </div>
     </div>
   );

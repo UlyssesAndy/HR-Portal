@@ -2,7 +2,7 @@ import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { OrgChartPro } from "@/components/org-chart/org-chart-pro";
-import { Network, Users, GitBranch, Layers } from "lucide-react";
+import { Network, Users, GitBranch, Layers, Crown, Building2 } from "lucide-react";
 
 interface EmployeeNode {
   id: string;
@@ -94,34 +94,44 @@ export default async function OrgChartPage() {
 
   return (
     <div className="space-y-4">
-      {/* Premium header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg shadow-indigo-500/30">
-            <Network className="h-5 w-5 text-white" />
+      {/* Premium gradient header */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-600 p-6 text-white shadow-xl shadow-purple-500/20">
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[size:40px_40px]" />
+        <div className="absolute -top-24 -right-24 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
+        
+        <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="h-12 w-12 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-sm border border-white/10">
+              <Network className="h-6 w-6" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight">Organization Chart</h1>
+              <p className="text-white/70 mt-0.5">Interactive team structure visualization</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent dark:from-indigo-400 dark:to-purple-400">Organization</h1>
-            <p className="text-sm text-slate-500 dark:text-slate-400">Team structure</p>
-          </div>
-        </div>
-
-        {/* Compact stats */}
-        <div className="flex items-center gap-6 text-sm">
-          <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
-            <Users className="h-4 w-4 text-indigo-500" />
-            <span className="font-medium text-slate-700 dark:text-slate-300">{stats.total}</span>
-            <span>people</span>
-          </div>
-          <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
-            <GitBranch className="h-4 w-4 text-purple-500" />
-            <span className="font-medium text-slate-700 dark:text-slate-300">{stats.managers}</span>
-            <span>managers</span>
-          </div>
-          <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
-            <Layers className="h-4 w-4 text-pink-500" />
-            <span className="font-medium text-slate-700 dark:text-slate-300">{stats.maxDepth}</span>
-            <span>levels</span>
+          
+          {/* Stats badges */}
+          <div className="flex flex-wrap gap-2">
+            <div className="rounded-xl bg-white/10 backdrop-blur-sm px-3 py-1.5 border border-white/10 flex items-center gap-2">
+              <Users className="h-4 w-4 text-emerald-300" />
+              <span className="font-bold">{stats.total}</span>
+              <span className="text-xs text-white/60">people</span>
+            </div>
+            <div className="rounded-xl bg-white/10 backdrop-blur-sm px-3 py-1.5 border border-white/10 flex items-center gap-2">
+              <Crown className="h-4 w-4 text-amber-300" />
+              <span className="font-bold">{stats.managers}</span>
+              <span className="text-xs text-white/60">managers</span>
+            </div>
+            <div className="rounded-xl bg-white/10 backdrop-blur-sm px-3 py-1.5 border border-white/10 flex items-center gap-2">
+              <Layers className="h-4 w-4 text-pink-300" />
+              <span className="font-bold">{stats.maxDepth}</span>
+              <span className="text-xs text-white/60">levels</span>
+            </div>
+            <div className="rounded-xl bg-white/10 backdrop-blur-sm px-3 py-1.5 border border-white/10 flex items-center gap-2">
+              <Building2 className="h-4 w-4 text-cyan-300" />
+              <span className="font-bold">{stats.topLevel}</span>
+              <span className="text-xs text-white/60">top-level</span>
+            </div>
           </div>
         </div>
       </div>
