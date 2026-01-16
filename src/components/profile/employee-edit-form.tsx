@@ -40,6 +40,14 @@ interface Employee {
   statusNote: string | null;
   statusStartDate: string | null;
   statusEndDate: string | null;
+  // Messaging
+  mattermostUsername: string | null;
+  telegramHandle: string | null;
+  messengerHandle: string | null;
+  // Emergency contacts
+  emergencyContactName: string | null;
+  emergencyContactPhone: string | null;
+  emergencyContactEmail: string | null;
 }
 
 interface EmployeeEditFormProps {
@@ -95,6 +103,14 @@ export function EmployeeEditForm({
     statusNote: employee.statusNote || "",
     statusStartDate: employee.statusStartDate?.split("T")[0] || "",
     statusEndDate: employee.statusEndDate?.split("T")[0] || "",
+    // Messaging
+    mattermostUsername: employee.mattermostUsername || "",
+    telegramHandle: employee.telegramHandle || "",
+    messengerHandle: employee.messengerHandle || "",
+    // Emergency contacts
+    emergencyContactName: employee.emergencyContactName || "",
+    emergencyContactPhone: employee.emergencyContactPhone || "",
+    emergencyContactEmail: employee.emergencyContactEmail || "",
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -212,6 +228,91 @@ export function EmployeeEditForm({
                 placeholder="America/New_York"
                 className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
               />
+            </div>
+          </div>
+
+          {/* Messaging */}
+          <div className="grid gap-4 md:grid-cols-3">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Mattermost Username
+              </label>
+              <input
+                type="text"
+                name="mattermostUsername"
+                value={formData.mattermostUsername}
+                onChange={handleChange}
+                placeholder="username (without @)"
+                className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Telegram Handle
+              </label>
+              <input
+                type="text"
+                name="telegramHandle"
+                value={formData.telegramHandle}
+                onChange={handleChange}
+                placeholder="username (without @)"
+                className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Messenger Handle
+              </label>
+              <input
+                type="text"
+                name="messengerHandle"
+                value={formData.messengerHandle}
+                onChange={handleChange}
+                className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
+              />
+            </div>
+          </div>
+
+          {/* Emergency Contact */}
+          <div className="p-4 rounded-xl bg-red-50 border border-red-200 space-y-4">
+            <h4 className="font-medium text-red-800">Emergency Contact</h4>
+            <div className="grid gap-4 md:grid-cols-3">
+              <div>
+                <label className="block text-sm font-medium text-red-700 mb-1">
+                  Name
+                </label>
+                <input
+                  type="text"
+                  name="emergencyContactName"
+                  value={formData.emergencyContactName}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 rounded-xl border border-red-200 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 outline-none transition-all bg-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-red-700 mb-1">
+                  Phone
+                </label>
+                <input
+                  type="tel"
+                  name="emergencyContactPhone"
+                  value={formData.emergencyContactPhone}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 rounded-xl border border-red-200 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 outline-none transition-all bg-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-red-700 mb-1">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  name="emergencyContactEmail"
+                  value={formData.emergencyContactEmail}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 rounded-xl border border-red-200 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 outline-none transition-all bg-white"
+                />
+              </div>
             </div>
           </div>
 
